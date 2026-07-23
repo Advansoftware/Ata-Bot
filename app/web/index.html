@@ -248,7 +248,7 @@
   .mt-detail-head h2 { font-size: 21px; font-weight: 750; letter-spacing: -.02em; margin: 12px 0 8px; line-height: 1.3; }
   .mt-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); font-weight: 550; }
   .mt-meta span { display: flex; align-items: center; gap: 6px; }
-  .mt-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .mt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .mt-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
   .mt-tab {
     background: transparent; border: none; border-bottom: 2px solid transparent;
@@ -513,6 +513,8 @@
         <div id="meetingsList">
           <div class="mt-toolbar">
             <div class="mt-search"><input id="meetingSearch" type="search" placeholder="🔎 Buscar em assuntos, transcrições e atas…" /></div>
+            <button class="btn-ghost btn-tiny" id="importMeetings" type="button">⬆ Importar</button>
+            <button class="btn-ghost btn-tiny" id="exportAll" type="button">📦 Exportar tudo</button>
             <button class="btn-ghost btn-tiny" id="refreshMeetings" type="button">🔄 Atualizar</button>
             <span class="count" id="meetingsCount"></span>
           </div>
@@ -533,7 +535,8 @@
             <div class="mt-meta" id="mdMeta"></div>
             <div class="mt-actions">
               <button class="btn-ghost btn-tiny" id="copyMinutes" type="button">📋 Copiar ata</button>
-              <button class="btn-ghost btn-tiny" id="exportMinutes" type="button">⬇ Exportar</button>
+              <button class="btn-ghost btn-tiny" id="exportMinutes" type="button">⬇ Ata .md</button>
+              <button class="btn-ghost btn-tiny" id="exportMeeting" type="button">📦 Exportar pacote</button>
               <button class="btn-ghost btn-tiny" id="sendWebhook" type="button">📤 Enviar</button>
               <button class="btn-ghost btn-tiny" id="openFolder" type="button">📂 Abrir pasta</button>
               <button class="btn-danger btn-tiny" id="deleteMeeting" type="button">🗑 Apagar</button>
@@ -1820,6 +1823,28 @@
     const r = await window.pywebview.api.send_webhook(currentMeetingId);
     btn.disabled = false; btn.textContent = "📤 Enviar";
     toast(r.ok ? "✅ Ata enviada." : (r.error || "Falha ao enviar."));
+  });
+
+  // ---- Import / export de pacotes (.atabot) ----
+  $("#exportMeeting").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const btn = $("#exportMeeting"); btn.disabled = true; btn.textContent = "Exportando…";
+    const r = await window.pywebview.api.export_meeting(currentMeetingId);
+    btn.disabled = false; btn.textContent = "📦 Exportar pacote";
+    if (r.ok) toast("✅ Pacote exportado."); else if (r.error) toast(r.error);
+  });
+  $("#exportAll").addEventListener("click", async () => {
+    const btn = $("#exportAll"); btn.disabled = true;
+    const r = await window.pywebview.api.export_all_meetings();
+    btn.disabled = false;
+    if (r.ok) toast(`✅ ${r.count} reunião(ões) exportada(s).`); else if (r.error) toast(r.error);
+  });
+  $("#importMeetings").addEventListener("click", async () => {
+    const btn = $("#importMeetings"); btn.disabled = true; btn.textContent = "Importando…";
+    const r = await window.pywebview.api.import_meetings();
+    btn.disabled = false; btn.textContent = "⬆ Importar";
+    if (r.ok) { toast(`✅ ${r.count} reunião(ões) importada(s).`); loadMeetings(); }
+    else if (r.error) toast(r.error);
   });
 
   async function refresh() {

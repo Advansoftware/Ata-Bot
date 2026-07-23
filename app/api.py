@@ -778,6 +778,71 @@ class Api:
         except Exception as e:  # noqa: BLE001
             return {"error": str(e)}
 
+    # ---- Import / export de pacotes (.atabot) ----
+
+    def export_meeting(self, meeting_id: str) -> dict:
+        """Exporta UMA reunião (tudo) num pacote .atabot via 'Salvar como'."""
+        m = storage.get_meeting(meeting_id)
+        if m is None:
+            return {"error": "Reunião não encontrada."}
+        if self.window is None:
+            return {"error": "Janela indisponível."}
+        subject = _derive_subject(
+            self._read_text(m.minutes_path) or self._read_text(Path(m.dir_path) / "minutes.md")
+        ) or "reuniao"
+        safe = re.sub(r"[^\w\- ]", "", subject).strip()[:40] or "reuniao"
+        res = self.window.create_file_dialog(webview.SAVE_DIALOG, save_filename=f"{safe}.atabot")
+        if not res:
+            return {"cancelled": True}
+        path = res if isinstance(res, str) else res[0]
+        try:
+            from core import transfer
+
+            n = transfer.bundle([m], path)
+            return {"ok": True, "count": n, "path": path}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def export_all_meetings(self) -> dict:
+        """Exporta TODAS as reuniões num único pacote .atabot."""
+        meetings = storage.list_meetings(limit=1000)
+        if not meetings:
+            return {"error": "Nenhuma reunião para exportar."}
+        if self.window is None:
+            return {"error": "Janela indisponível."}
+        res = self.window.create_file_dialog(
+            webview.SAVE_DIALOG, save_filename="reunioes-atabot.atabot"
+        )
+        if not res:
+            return {"cancelled": True}
+        path = res if isinstance(res, str) else res[0]
+        try:
+            from core import transfer
+
+            n = transfer.bundle(meetings, path)
+            return {"ok": True, "count": n, "path": path}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def import_meetings(self) -> dict:
+        """Importa um pacote .atabot (uma ou várias reuniões) via 'Abrir'."""
+        if self.window is None:
+            return {"error": "Janela indisponível."}
+        res = self.window.create_file_dialog(
+            webview.OPEN_DIALOG,
+            file_types=("Pacote Ata Bot (*.atabot;*.zip)", "Todos os arquivos (*.*)"),
+        )
+        if not res:
+            return {"cancelled": True}
+        path = res if isinstance(res, str) else res[0]
+        try:
+            from core import transfer
+
+            ids = transfer.unbundle(path)
+            return {"ok": True, "count": len(ids)}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
     def send_webhook(self, meeting_id: str) -> dict:
         """Envia a ata para a URL de webhook configurada (Slack/Discord/Zapier)."""
         url = (read_raw().get("webhook_url") or "").strip()

@@ -8,6 +8,10 @@ projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ## [Não lançado]
 
 ### Adicionado
+- **Import/export de reuniões** em pacote `.atabot` (zip): exporta uma reunião ou
+  todas com tudo (áudio, transcrição, ata, índice RAG e metadados) e importa em
+  outra instalação — ids em conflito viram novos, sem sobrescrever (`core/transfer.py`).
+- **Indicador de progresso da transcrição** (% real) no card da reunião.
 - **Chat com as reuniões**: pergunte à IA sobre todo o histórico (ou sobre uma
   reunião específica, via balão de chat na tela da reunião). As respostas citam a
   reunião e o momento exato — clicar leva ao ponto e toca o áudio.

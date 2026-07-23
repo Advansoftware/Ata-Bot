@@ -160,6 +160,29 @@ def list_meetings(limit: int = 50) -> list[Meeting]:
     return [_row_to_meeting(r) for r in rows]
 
 
+def add_imported_meeting(
+    *,
+    id: str,
+    guild_id: int,
+    channel_id: int,
+    started_at: str,
+    ended_at: str | None,
+    status: str,
+    dir_path: str,
+    transcript_path: str | None,
+    minutes_path: str | None,
+) -> None:
+    """Insere (ou substitui) uma reunião vinda de um pacote importado."""
+    with _connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO meetings (id, guild_id, channel_id, started_at, "
+            "ended_at, status, dir_path, transcript_path, minutes_path) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (id, guild_id, channel_id, started_at, ended_at, status,
+             dir_path, transcript_path, minutes_path),
+        )
+
+
 def delete_meeting(meeting_id: str) -> bool:
     """Remove a reunião do índice e apaga a pasta em disco. True se existia."""
     import shutil

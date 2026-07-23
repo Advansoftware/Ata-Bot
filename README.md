@@ -42,6 +42,9 @@ Além disso, o app tem:
   estado de concluído que fica salvo.
 - **Compartilhar a ata** — copiar, exportar `.md` ou enviar por **webhook**
   (Slack/Discord/Zapier).
+- **📦 Importar/exportar reuniões** — empacote uma reunião (ou todas) num arquivo
+  `.atabot` com **tudo** (áudio, transcrição, ata e índice do chat) e importe em
+  outro PC com o app: a outra pessoa passa a ter exatamente o que você gerou.
 
 ## Provedores de ata (escolha na interface)
 
