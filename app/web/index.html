@@ -333,6 +333,8 @@
     font-family: inherit; font-size: 13.5px; line-height: 1.4;
   }
   .chat-input-row textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .chat-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .chat-bar select { flex: 1; max-width: 340px; padding: 8px 12px; font-size: 13px; }
   .chat-scope { font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
   .typing { display: inline-flex; gap: 4px; }
   .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1s infinite; }
@@ -523,6 +525,12 @@
       <!-- ===================== CHAT ===================== -->
       <section class="view hidden" data-view="chat">
         <div class="chat-wrap">
+          <div class="chat-bar">
+            <select id="chatSession" title="Conversas"></select>
+            <button class="btn-ghost btn-tiny" id="chatNew" type="button">+ Nova</button>
+            <button class="btn-ghost btn-tiny" id="chatClear" type="button">🧹 Limpar</button>
+            <button class="btn-ghost btn-tiny" id="chatDelete" type="button">🗑 Apagar</button>
+          </div>
           <div class="chat-scope">💡 Pergunte sobre <b>todas as suas reuniões</b>. As respostas citam a reunião e o momento — clique para ver e ouvir.</div>
           <div id="chatMsgs" class="chat-msgs"></div>
           <div class="chat-input-row">
@@ -1475,10 +1483,52 @@
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
 
-  // ---- Chat global (aba) ----
+  // ---- Chat global (aba) com sessões ----
   let chatBusy = false;
+  let currentSessionId = null;
   const CHAT_EXAMPLES = ["Quais foram as decisões?", "O que ficou pendente?", "Resuma minhas últimas reuniões", "Quais tarefas ficaram para mim?"];
-  function initChat() { if (!$("#chatMsgs").children.length) renderChatEmpty(); }
+
+  async function initChat() { await loadChatSessions(true); }
+
+  function sessionOptionsHtml(sessions) {
+    return sessions.map(s => `<option value="${s.id}">${escapeHtml(s.title)}${s.count ? ` (${s.count})` : ""}</option>`).join("");
+  }
+  async function loadChatSessions(reselect) {
+    let sessions = [];
+    try { sessions = await window.pywebview.api.chat_sessions(); } catch (e) { sessions = []; }
+    if (!sessions.length) {
+      try { const s = await window.pywebview.api.new_chat_session(); sessions = [{ id: s.id, title: "Nova conversa", count: 0 }]; } catch (e) { }
+    }
+    $("#chatSession").innerHTML = sessionOptionsHtml(sessions);
+    if (reselect || !currentSessionId || !sessions.some(s => s.id === currentSessionId)) {
+      currentSessionId = sessions.length ? sessions[0].id : null;
+    }
+    if (currentSessionId) { $("#chatSession").value = currentSessionId; await loadSession(currentSessionId); }
+  }
+  async function refreshSessionOptions() {
+    let sessions = [];
+    try { sessions = await window.pywebview.api.chat_sessions(); } catch (e) { return; }
+    $("#chatSession").innerHTML = sessionOptionsHtml(sessions);
+    if (currentSessionId) $("#chatSession").value = currentSessionId;
+  }
+  async function loadSession(id) {
+    currentSessionId = id;
+    let s;
+    try { s = await window.pywebview.api.get_chat_session(id); } catch (e) { s = { messages: [] }; }
+    renderMessages((s && s.messages) || []);
+  }
+  function wireCites(el) {
+    el.querySelectorAll(".cite").forEach(c => c.addEventListener("click", () => goToCitation(c.dataset.id, parseFloat(c.dataset.sec))));
+  }
+  function renderMessages(msgs) {
+    const box = $("#chatMsgs"); box.innerHTML = "";
+    if (!msgs.length) { renderChatEmpty(); return; }
+    for (const m of msgs) {
+      if (m.role === "user") appendMsg(box, "user", escapeHtml(m.content));
+      else wireCites(appendMsg(box, "ai markdown-body", renderCitations(renderMarkdown(m.content))));
+    }
+    box.scrollTop = box.scrollHeight;
+  }
   function renderChatEmpty() {
     $("#chatMsgs").innerHTML = `<div class="chat-empty"><div class="big">💬</div>
       <div>Pergunte qualquer coisa sobre suas reuniões gravadas.</div>
@@ -1490,12 +1540,41 @@
     const q = $("#chatInput").value.trim(); if (!q) return;
     const empty = $("#chatMsgs").querySelector(".chat-empty"); if (empty) empty.remove();
     $("#chatInput").value = "";
+    appendMsg($("#chatMsgs"), "user", escapeHtml(q));
+    const thinking = appendMsg($("#chatMsgs"), "ai", '<span class="typing"><i></i><i></i><i></i></span>');
     chatBusy = true; $("#chatSend").disabled = true;
-    await askAndRender(q, null, $("#chatMsgs"), goToCitation);
+    let r;
+    try { r = await window.pywebview.api.chat(currentSessionId, q); } catch (e) { r = { error: String(e) }; }
     chatBusy = false; $("#chatSend").disabled = false;
+    if (r.session_id) currentSessionId = r.session_id;
+    if (r.error) { thinking.innerHTML = `<span style="color:var(--danger)">${escapeHtml(r.error)}</span>`; return; }
+    thinking.classList.add("markdown-body");
+    thinking.innerHTML = renderCitations(renderMarkdown(r.answer || "(sem resposta)"));
+    wireCites(thinking);
+    $("#chatMsgs").scrollTop = $("#chatMsgs").scrollHeight;
+    refreshSessionOptions();
   }
   $("#chatSend").addEventListener("click", sendChat);
   $("#chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  $("#chatSession").addEventListener("change", () => loadSession($("#chatSession").value));
+  $("#chatNew").addEventListener("click", async () => {
+    try { const s = await window.pywebview.api.new_chat_session(); currentSessionId = s.id; } catch (e) { }
+    await refreshSessionOptions();
+    renderMessages([]); $("#chatInput").focus();
+  });
+  $("#chatClear").addEventListener("click", async () => {
+    if (!currentSessionId) return;
+    await window.pywebview.api.clear_chat_session(currentSessionId);
+    renderMessages([]); refreshSessionOptions();
+  });
+  $("#chatDelete").addEventListener("click", async () => {
+    if (!currentSessionId) return;
+    const ok = await confirmModal("Apagar esta conversa?", "As mensagens desta conversa serão removidas permanentemente.", "Apagar");
+    if (!ok) return;
+    await window.pywebview.api.delete_chat_session(currentSessionId);
+    currentSessionId = null;
+    await loadChatSessions(true);
+  });
   function goToCitation(id, seconds) { switchView("meetings"); openMeeting(id, { seek: seconds }); }
 
   // ---- Balão de chat dentro da reunião ----

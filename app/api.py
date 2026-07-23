@@ -625,6 +625,47 @@ class Api:
             return {"error": f"Erro ao consultar a IA: {e}"}
         return {"answer": answer, "meetings_used": used, "mode": mode}
 
+    # ---- Sessões do chat global ----
+
+    def chat_sessions(self) -> list[dict]:
+        from core import chatsessions
+
+        return chatsessions.list_sessions()
+
+    def get_chat_session(self, session_id: str) -> dict:
+        from core import chatsessions
+
+        s = chatsessions.get_session(session_id)
+        return s or {"error": "Sessão não encontrada."}
+
+    def new_chat_session(self) -> dict:
+        from core import chatsessions
+
+        return chatsessions.create_session()
+
+    def delete_chat_session(self, session_id: str) -> dict:
+        from core import chatsessions
+
+        return {"ok": chatsessions.delete_session(session_id)}
+
+    def clear_chat_session(self, session_id: str) -> dict:
+        from core import chatsessions
+
+        return {"ok": chatsessions.clear_session(session_id)}
+
+    def chat(self, session_id: str | None, question: str) -> dict:
+        """Chat global com sessão: responde (RAG) e persiste a conversa."""
+        from core import chatsessions
+
+        if not session_id or chatsessions.get_session(session_id) is None:
+            session_id = chatsessions.create_session()["id"]
+        r = self.ask_meetings(question, None)
+        if r.get("error"):
+            return {"error": r["error"], "session_id": session_id}
+        chatsessions.append(session_id, "user", question)
+        chatsessions.append(session_id, "assistant", r["answer"])
+        return {"answer": r["answer"], "mode": r.get("mode"), "session_id": session_id}
+
     # ---- Busca global ----
 
     def search_meetings(self, query: str) -> list[dict]:
