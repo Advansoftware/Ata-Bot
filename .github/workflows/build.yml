@@ -1,0 +1,130 @@
+name: Build (Windows · macOS · Linux)
+
+# Gera o app empacotado (PyInstaller) nas três plataformas. Não dá para
+# cross-compilar, então cada plataforma builda no seu próprio runner.
+#
+# Quando roda:
+#   - manualmente (aba Actions -> Run workflow);
+#   - ao criar uma tag "v*" (ex.: v1.0.0) -> além dos artefatos, publica um Release
+#     com os pacotes anexados.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # necessário para o job de release criar/atualizar a Release
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ----------------------------------------------------------------- Linux
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # O pywebview no Linux usa PyGObject + WebKitGTK do SISTEMA. O setup-python
+      # não enxerga pacotes do apt, então usamos o Python do sistema com um venv
+      # "--system-site-packages" para o build enxergar o gi/WebKit instalados.
+      - name: Instalar libs de sistema (WebKitGTK, PortAudio)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-venv python3-gi python3-gi-cairo \
+            gir1.2-webkit2-4.1 libportaudio2
+
+      - name: Criar venv e instalar dependências
+        run: |
+          python3 -m venv --system-site-packages .venv
+          ./.venv/bin/pip install --upgrade pip
+          ./.venv/bin/pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Empacotar (PyInstaller)
+        run: ./.venv/bin/pyinstaller --noconfirm packaging/atabot.spec
+
+      - name: Compactar artefato
+        run: |
+          cd dist
+          tar -czf "../Ata-Bot-linux-x86_64.tar.gz" "Ata Bot"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ata-Bot-linux-x86_64
+          path: Ata-Bot-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  # --------------------------------------------------------------- Windows
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Empacotar (PyInstaller)
+        run: pyinstaller --noconfirm packaging/atabot.spec
+
+      - name: Compactar artefato
+        run: Compress-Archive -Path "dist/Ata Bot" -DestinationPath "Ata-Bot-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ata-Bot-windows-x64
+          path: Ata-Bot-windows-x64.zip
+          if-no-files-found: error
+
+  # ----------------------------------------------------------------- macOS
+  build-macos:
+    runs-on: macos-latest # Apple Silicon (arm64)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Empacotar (PyInstaller)
+        run: pyinstaller --noconfirm packaging/atabot.spec
+
+      # ditto preserva a estrutura do .app (symlinks, permissões) melhor que zip.
+      - name: Compactar artefato (.app)
+        run: ditto -c -k --keepParent "dist/Ata Bot.app" "Ata-Bot-macOS-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ata-Bot-macOS-arm64
+          path: Ata-Bot-macOS-arm64.zip
+          if-no-files-found: error
+
+  # --------------------------------------------- Release (só em tags "v*")
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publicar Release com os pacotes
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

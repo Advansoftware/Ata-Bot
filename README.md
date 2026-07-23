@@ -160,6 +160,26 @@ Saída em `dist/`:
 > (macOS: `~/Library/Application Support/AtaBot`; Windows: `%APPDATA%\AtaBot`;
 > Linux: `~/.local/share/ata-bot`), não dentro do bundle.
 
+### Build automatizado (CI) — as três plataformas de uma vez
+
+Como não dá para cross-compilar, o jeito prático de gerar o app para os três
+sistemas (inclusive **macOS sem ter um Mac**) é o CI. Este repositório já traz um
+workflow do **GitHub Actions** em [`.github/workflows/build.yml`](.github/workflows/build.yml)
+que builda em `ubuntu-latest`, `windows-latest` e `macos-latest`:
+
+- **Rodar sob demanda:** aba **Actions** → *Build (Windows · macOS · Linux)* →
+  **Run workflow**. Ao terminar, baixe os pacotes em **Artifacts**.
+- **Publicar uma versão:** crie uma tag `v*` — além dos artefatos, o workflow anexa
+  os pacotes a uma **Release** automaticamente:
+  ```bash
+  git tag v1.0.0 && git push origin v1.0.0
+  ```
+
+Saída por plataforma: `Ata-Bot-linux-x86_64.tar.gz`, `Ata-Bot-windows-x64.zip` e
+`Ata-Bot-macOS-arm64.zip` (Apple Silicon). Runners `macos-latest` são gratuitos em
+repositório público. O app do macOS não é assinado, então na 1ª vez abra com
+**clique-direito → Abrir** (Gatekeeper).
+
 ## Rodar sem interface (opcional, ex.: servidor)
 
 Depois de configurar uma vez pela interface (gera o `data/settings.json`):
