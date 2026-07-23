@@ -12,6 +12,7 @@ Saída:
 Importante: NÃO dá para cross-compilar. Rode o build em cada SO de destino.
 """
 import os
+import re
 import sys
 
 from PyInstaller.utils.hooks import collect_all
@@ -19,6 +20,12 @@ from PyInstaller.utils.hooks import collect_all
 # Caminhos relativos num .spec são resolvidos a partir da pasta do spec (SPECPATH).
 # Ancoramos tudo na RAIZ do projeto (pasta acima de packaging/).
 ROOT = os.path.abspath(os.path.join(SPECPATH, os.pardir))
+
+# Versão vinda do CI (env ATABOT_VERSION, ex.: "1.2.0" ou "1.2.0-rc1"). Para o
+# CFBundleShortVersionString do macOS só o x.y.z numérico é válido.
+_RAW_VERSION = os.environ.get("ATABOT_VERSION", "0.0.0")
+_m = re.match(r"(\d+\.\d+\.\d+)", _RAW_VERSION)
+VERSION = _m.group(1) if _m else "0.0.0"
 
 datas, binaries, hiddenimports = [], [], []
 
@@ -93,7 +100,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Ata Bot",
             "CFBundleDisplayName": "Ata Bot",
-            "CFBundleShortVersionString": "1.0.0",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,
             # Permissões exigidas no macOS:
             "NSMicrophoneUsageDescription": "O Ata Bot usa o microfone para o teste de transcrição.",

@@ -167,18 +167,22 @@ sistemas (inclusive **macOS sem ter um Mac**) é o CI. Este repositório já tra
 workflow do **GitHub Actions** em [`.github/workflows/build.yml`](.github/workflows/build.yml)
 que builda em `ubuntu-latest`, `windows-latest` e `macos-latest`:
 
-- **Rodar sob demanda:** aba **Actions** → *Build (Windows · macOS · Linux)* →
-  **Run workflow**. Ao terminar, baixe os pacotes em **Artifacts**.
-- **Publicar uma versão:** crie uma tag `v*` — além dos artefatos, o workflow anexa
-  os pacotes a uma **Release** automaticamente:
+- **Rodar sob demanda:** aba **Actions** → *Build & Release* → **Run workflow**.
+  Ao terminar, baixe os pacotes em **Artifacts**.
+- **Publicar uma versão:** crie e envie uma tag semver. O workflow builda as três
+  plataformas e publica uma **Release** com os pacotes **versionados**, um
+  `checksums.txt` (SHA-256) e as notas geradas automaticamente ("What's Changed"):
   ```bash
-  git tag v1.0.0 && git push origin v1.0.0
+  git tag -a v1.0.0 -m "v1.0.0" && git push origin v1.0.0
   ```
+  Tags com sufixo (`v1.0.0-rc1`, `v1.2.0-beta`) são publicadas como **pré-release**.
+  A versão da tag é embutida no app (ex.: no *Sobre* do macOS).
 
-Saída por plataforma: `Ata-Bot-linux-x86_64.tar.gz`, `Ata-Bot-windows-x64.zip` e
-`Ata-Bot-macOS-arm64.zip` (Apple Silicon). Runners `macos-latest` são gratuitos em
-repositório público. O app do macOS não é assinado, então na 1ª vez abra com
-**clique-direito → Abrir** (Gatekeeper).
+Saída por plataforma: `Ata-Bot-<versão>-linux-x86_64.tar.gz`,
+`Ata-Bot-<versão>-windows-x64.zip` e `Ata-Bot-<versão>-macOS-arm64.zip` (Apple
+Silicon). Runners `macos-latest` são gratuitos em repositório público. O app do
+macOS não é assinado, então na 1ª vez abra com **clique-direito → Abrir**
+(Gatekeeper). O histórico de versões fica no [CHANGELOG.md](CHANGELOG.md).
 
 ## Rodar sem interface (opcional, ex.: servidor)
 

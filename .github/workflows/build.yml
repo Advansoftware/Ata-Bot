@@ -1,33 +1,72 @@
-name: Build (Windows · macOS · Linux)
+name: Build & Release
 
-# Gera o app empacotado (PyInstaller) nas três plataformas. Não dá para
-# cross-compilar, então cada plataforma builda no seu próprio runner.
+# Gera o app empacotado (PyInstaller) para Windows, macOS e Linux e — quando a
+# execução vem de uma tag "v*" — publica uma Release completa (pacotes versionados,
+# checksums SHA-256 e notas geradas automaticamente).
 #
-# Quando roda:
-#   - manualmente (aba Actions -> Run workflow);
-#   - ao criar uma tag "v*" (ex.: v1.0.0) -> além dos artefatos, publica um Release
-#     com os pacotes anexados.
+# Não dá para cross-compilar: cada plataforma builda no seu próprio runner.
+#
+# Como usar:
+#   - Testar o build: aba Actions -> "Build & Release" -> Run workflow.
+#   - Lançar uma versão: crie e envie uma tag semver, ex.:
+#       git tag -a v1.0.0 -m "v1.0.0" && git push origin v1.0.0
+#     Tags com sufixo (v1.0.0-rc1, v1.2.0-beta) viram pré-releases automaticamente.
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write # necessário para o job de release criar/atualizar a Release
+  contents: write # o job de release precisa criar/atualizar a Release
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.12"
 
 jobs:
-  # ----------------------------------------------------------------- Linux
-  build-linux:
+  # ------------------------------------------------- Versão (fonte da verdade)
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      is_release: ${{ steps.v.outputs.is_release }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+          else
+            VER="0.0.0-dev+${GITHUB_SHA::7}"
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          # Pré-release quando a versão tem sufixo (ex.: 1.0.0-rc1).
+          if [[ "$VER" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "### Versão: \`$VER\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ------------------------------------------------------------------- Linux
+  build-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      ATABOT_VERSION: ${{ needs.version.outputs.version }}
+      ARTIFACT: Ata-Bot-${{ needs.version.outputs.version }}-linux-x86_64
     steps:
       - uses: actions/checkout@v4
 
-      # O pywebview no Linux usa PyGObject + WebKitGTK do SISTEMA. O setup-python
-      # não enxerga pacotes do apt, então usamos o Python do sistema com um venv
-      # "--system-site-packages" para o build enxergar o gi/WebKit instalados.
+      # pywebview no Linux usa PyGObject + WebKitGTK do SISTEMA. O setup-python não
+      # enxerga pacotes do apt, então usamos o Python do sistema com um venv
+      # "--system-site-packages" para o build ver o gi/WebKit instalados.
       - name: Instalar libs de sistema (WebKitGTK, PortAudio)
         run: |
           sudo apt-get update
@@ -47,17 +86,21 @@ jobs:
       - name: Compactar artefato
         run: |
           cd dist
-          tar -czf "../Ata-Bot-linux-x86_64.tar.gz" "Ata Bot"
+          tar -czf "../${ARTIFACT}.tar.gz" "Ata Bot"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Ata-Bot-linux-x86_64
-          path: Ata-Bot-linux-x86_64.tar.gz
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}.tar.gz
           if-no-files-found: error
 
   # --------------------------------------------------------------- Windows
   build-windows:
+    needs: version
     runs-on: windows-latest
+    env:
+      ATABOT_VERSION: ${{ needs.version.outputs.version }}
+      ARTIFACT: Ata-Bot-${{ needs.version.outputs.version }}-windows-x64
     steps:
       - uses: actions/checkout@v4
 
@@ -75,17 +118,21 @@ jobs:
         run: pyinstaller --noconfirm packaging/atabot.spec
 
       - name: Compactar artefato
-        run: Compress-Archive -Path "dist/Ata Bot" -DestinationPath "Ata-Bot-windows-x64.zip"
+        run: Compress-Archive -Path "dist/Ata Bot" -DestinationPath "${env:ARTIFACT}.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Ata-Bot-windows-x64
-          path: Ata-Bot-windows-x64.zip
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}.zip
           if-no-files-found: error
 
   # ----------------------------------------------------------------- macOS
   build-macos:
+    needs: version
     runs-on: macos-latest # Apple Silicon (arm64)
+    env:
+      ATABOT_VERSION: ${{ needs.version.outputs.version }}
+      ARTIFACT: Ata-Bot-${{ needs.version.outputs.version }}-macOS-arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -104,27 +151,87 @@ jobs:
 
       # ditto preserva a estrutura do .app (symlinks, permissões) melhor que zip.
       - name: Compactar artefato (.app)
-        run: ditto -c -k --keepParent "dist/Ata Bot.app" "Ata-Bot-macOS-arm64.zip"
+        run: ditto -c -k --keepParent "dist/Ata Bot.app" "${ARTIFACT}.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Ata-Bot-macOS-arm64
-          path: Ata-Bot-macOS-arm64.zip
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}.zip
           if-no-files-found: error
 
   # --------------------------------------------- Release (só em tags "v*")
   release:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [version, build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.version.outputs.is_release == 'true'
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Baixar todos os artefatos
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: Publicar Release com os pacotes
+      - name: Gerar checksums (SHA-256)
+        working-directory: artifacts
+        run: |
+          sha256sum * > checksums.txt
+          echo "### Checksums (SHA-256)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat checksums.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Montar notas da release
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          base="https://github.com/${REPO}/releases/download/${TAG}"
+          win="Ata-Bot-${VERSION}-windows-x64.zip"
+          mac="Ata-Bot-${VERSION}-macOS-arm64.zip"
+          lin="Ata-Bot-${VERSION}-linux-x86_64.tar.gz"
+          cat > release_body.md <<EOF
+          ## 🎙️ Ata Bot v${VERSION}
+
+          App open source que **grava** reuniões de voz no Discord, **transcreve**
+          localmente e **gera a ata** automaticamente.
+
+          ### ⬇️ Downloads
+
+          | Plataforma | Arquivo |
+          | --- | --- |
+          | 🪟 **Windows** (x64) | [\`${win}\`](${base}/${win}) |
+          | 🍎 **macOS** (Apple Silicon) | [\`${mac}\`](${base}/${mac}) |
+          | 🐧 **Linux** (x86_64) | [\`${lin}\`](${base}/${lin}) |
+
+          Verifique a integridade dos downloads com o \`checksums.txt\` (SHA-256).
+
+          <details>
+          <summary>📦 <b>Como instalar</b></summary>
+
+          **🪟 Windows** — extraia o \`.zip\` e execute **\`Ata Bot.exe\`**. Requer o
+          WebView2 Runtime (já vem no Windows 10/11 atualizado).
+
+          **🍎 macOS** — extraia, mova **Ata Bot.app** para *Aplicativos* e, na 1ª vez,
+          abra com **clique-direito → Abrir** (o app não é assinado; Gatekeeper).
+
+          **🐧 Linux** — extraia e execute \`./Ata\ Bot/Ata\ Bot\`. Precisa das libs de
+          sistema **WebKitGTK** e **PortAudio** (veja o README). Build para x86_64.
+          </details>
+
+          > Gravação e transcrição rodam **100% na sua máquina**. Veja o
+          > [README](https://github.com/${REPO}#readme) para configurar o bot.
+          EOF
+
+      - name: Publicar Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          name: Ata Bot v${{ env.VERSION }}
+          body_path: release_body.md
+          append_body: true # anexa o "What's Changed" gerado automaticamente
           generate_release_notes: true
+          prerelease: ${{ needs.version.outputs.prerelease }}
+          make_latest: ${{ needs.version.outputs.prerelease == 'false' }}
+          files: artifacts/*
+          fail_on_unmatched_files: true
