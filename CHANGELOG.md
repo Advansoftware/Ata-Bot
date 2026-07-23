@@ -7,6 +7,22 @@ projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado
+- **Chat com as reuniões**: pergunte à IA sobre todo o histórico (ou sobre uma
+  reunião específica, via balão de chat na tela da reunião). As respostas citam a
+  reunião e o momento exato — clicar leva ao ponto e toca o áudio.
+- **Transcrição sincronizada com o áudio**: clicar numa fala posiciona o player
+  naquele instante; a linha em reprodução fica destacada.
+- **Busca global** por assunto, transcrição e ata.
+- **Tarefas**: itens de ação de todas as atas consolidados, com estado de
+  concluído persistido (`data/tasks_state.json`).
+- **Compartilhar a ata**: copiar, exportar `.md` e enviar por webhook
+  (Slack/Discord/Zapier); campo `webhook_url` na configuração.
+
+### Alterado
+- O pipeline salva `transcript.txt` assim que a transcrição termina (antes da ata),
+  o que preserva a transcrição mesmo se a geração da ata falhar.
+
 ## [1.0.0] - 2026-07-23
 
 Primeira versão pública.

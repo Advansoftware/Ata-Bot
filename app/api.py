@@ -6,6 +6,7 @@ Chaves de API nunca são devolvidas para a UI — só um indicador de "configura
 from __future__ import annotations
 
 import json
+import re
 import threading
 from pathlib import Path
 
@@ -14,6 +15,34 @@ import webview
 from app.botrunner import BotRunner
 from core import storage
 from core.config import PROVIDERS, Config, read_raw, save_raw
+
+_SEG_RE = re.compile(r"^\[(\d{2}):(\d{2}):(\d{2})\]\s+([^:]+?):\s+(.*)$")
+
+
+def _parse_segments(transcript: str) -> list[dict]:
+    """Converte 'transcript.txt' ([HH:MM:SS] Falante: texto) em segmentos com o
+    tempo em segundos — para o transcript clicável sincronizado com o player."""
+    segs: list[dict] = []
+    for line in (transcript or "").splitlines():
+        m = _SEG_RE.match(line)
+        if m:
+            h, mi, s = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            segs.append(
+                {"start": h * 3600 + mi * 60 + s, "speaker": m.group(4).strip(), "text": m.group(5).strip()}
+            )
+        elif segs and line.strip():
+            segs[-1]["text"] += " " + line.strip()  # continuação de uma fala longa
+    return segs
+
+
+def _snippet(text: str, query: str, ctx: int = 60) -> str:
+    low = text.lower()
+    i = low.find(query.lower())
+    if i < 0:
+        return text[:120].replace("\n", " ").strip()
+    start, end = max(0, i - ctx), min(len(text), i + len(query) + ctx)
+    s = text[start:end].replace("\n", " ").strip()
+    return ("…" if start > 0 else "") + s + ("…" if end < len(text) else "")
 
 
 def _short_subject(text: str, limit: int = 90) -> str:
@@ -92,6 +121,7 @@ class Api:
             "language": raw.get("language", "pt"),
             "post_to_discord": bool(raw.get("post_to_discord", True)),
             "output_dir": raw.get("output_dir", ""),
+            "webhook_url": raw.get("webhook_url", ""),
             "default_output_dir": str(Config.load().resolved_output_dir()),
             "mic_device": raw.get("mic_device", None),
             "transcription": raw.get("transcription", {}),
@@ -123,6 +153,10 @@ class Api:
         # Pasta de destino: string vazia = volta ao padrão (data/meetings).
         if "output_dir" in data:
             raw["output_dir"] = (data.get("output_dir") or "").strip()
+
+        # URL de webhook para enviar/compartilhar a ata.
+        if "webhook_url" in data:
+            raw["webhook_url"] = (data.get("webhook_url") or "").strip()
 
         # Microfone do teste: índice (int) ou None = padrão do SO.
         if "mic_device" in data:
@@ -458,6 +492,7 @@ class Api:
                 audio.append(
                     {
                         "name": f.name,
+                        "stem": f.stem,  # casa com o 'speaker' dos segmentos
                         "speaker": f.stem.replace("_", " "),
                         "size": f.stat().st_size,
                         "url": f"{base_url}/{f.name}" if base_url else "",
@@ -472,6 +507,7 @@ class Api:
             "participants": sorted(a["name"].rsplit(".", 1)[0] for a in audio),
             "minutes": minutes,
             "transcript": transcript,
+            "segments": _parse_segments(transcript),
             "audio_files": audio,
             "dir": str(d),
         }
@@ -501,3 +537,189 @@ class Api:
         """Apaga a reunião (índice + pasta em disco)."""
         ok = storage.delete_meeting(meeting_id)
         return {"ok": ok}
+
+    # ---- Chat com as reuniões (pergunta à IA sobre o histórico) ----
+
+    def ask_meetings(self, question: str, meeting_id: str | None = None) -> dict:
+        """Responde uma pergunta usando as transcrições (todas ou de uma reunião)."""
+        question = (question or "").strip()
+        if not question:
+            return {"error": "Digite uma pergunta."}
+        cfg = Config.load()
+        if not cfg.provider_ready():
+            return {"error": "Configure um provedor de IA (com chave) para usar o chat."}
+
+        meetings = (
+            [storage.get_meeting(meeting_id)] if meeting_id else storage.list_meetings(limit=200)
+        )
+        budget, blocks, used = 60000, [], 0
+        for m in meetings:
+            if m is None:
+                continue
+            d = Path(m.dir_path)
+            tr = self._read_text(m.transcript_path) or self._read_text(d / "transcript.txt")
+            if not tr.strip():
+                continue
+            minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+            subject = _derive_subject(minutes) or "Reunião"
+            # O id da reunião vai no cabeçalho para a IA poder citar a fonte, e o
+            # transcript mantém os [HH:MM:SS] para citar o momento exato.
+            block = f"### {subject} ({m.started_at[:10]}) — id={m.id}\n{tr}"
+            room = budget - sum(len(b) for b in blocks)
+            if len(block) > room:
+                if room > 500:
+                    blocks.append(block[:room])
+                    used += 1
+                break
+            blocks.append(block)
+            used += 1
+        if not blocks:
+            return {"error": "Nenhuma transcrição disponível para consultar."}
+
+        system = (
+            "Você é um assistente que responde perguntas sobre reuniões, baseado APENAS "
+            "nas transcrições fornecidas. Responda em português do Brasil, de forma "
+            "objetiva e em Markdown. Se a resposta não estiver nas transcrições, diga "
+            "claramente que não encontrou.\n"
+            "IMPORTANTE — citações: ao afirmar algo que veio de um trecho específico, "
+            "adicione logo depois uma citação clicável no formato exato "
+            "[[<id da reunião>@HH:MM:SS]], usando o id do cabeçalho da reunião e o "
+            "horário [HH:MM:SS] da fala correspondente. Ex.: [[a1b2c3d4e5f6@00:04:12]]. "
+            "Não invente ids nem horários; use os que aparecem no contexto."
+        )
+        user = f"Transcrições disponíveis:\n\n{chr(10).join(blocks)}\n\n---\nPergunta: {question}"
+        try:
+            from core.minutes import get_provider
+
+            answer = get_provider(cfg.minutes).complete(system, user, max_tokens=1500)
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"Erro ao consultar a IA: {e}"}
+        return {"answer": answer, "meetings_used": used}
+
+    # ---- Busca global ----
+
+    def search_meetings(self, query: str) -> list[dict]:
+        """Procura o termo no assunto, na transcrição e na ata de todas as reuniões."""
+        q = (query or "").strip().lower()
+        if not q:
+            return []
+        results = []
+        for m in storage.list_meetings(limit=300):
+            d = Path(m.dir_path)
+            minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+            transcript = self._read_text(m.transcript_path) or self._read_text(
+                d / "transcript.txt"
+            )
+            subject = _derive_subject(minutes) or "Reunião sem ata"
+            where, snippet = None, ""
+            if q in subject.lower():
+                where, snippet = "assunto", subject
+            elif transcript and q in transcript.lower():
+                where, snippet = "transcrição", _snippet(transcript, q)
+            elif minutes and q in minutes.lower():
+                where, snippet = "ata", _snippet(minutes, q)
+            if where:
+                results.append(
+                    {
+                        "id": m.id,
+                        "subject": subject,
+                        "started_at": m.started_at,
+                        "status": m.status,
+                        "where": where,
+                        "snippet": snippet,
+                    }
+                )
+        return results
+
+    # ---- Itens de ação consolidados (Tarefas) ----
+
+    def list_action_items(self) -> list[dict]:
+        from core import tasks
+
+        state = tasks.load_state()
+        out = []
+        for m in storage.list_meetings(limit=300):
+            d = Path(m.dir_path)
+            minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+            if not minutes.strip():
+                continue
+            subject = _derive_subject(minutes) or "Reunião"
+            for text in tasks.parse_action_items(minutes):
+                tid = tasks.task_id(m.id, text)
+                out.append(
+                    {
+                        "id": tid,
+                        "meeting_id": m.id,
+                        "subject": subject,
+                        "started_at": m.started_at,
+                        "text": text,
+                        "done": bool(state.get(tid)),
+                    }
+                )
+        return out
+
+    def set_action_done(self, task_id: str, done: bool) -> dict:
+        from core import tasks
+
+        tasks.set_done(task_id, bool(done))
+        return {"ok": True}
+
+    # ---- Exportar / compartilhar a ata ----
+
+    def get_minutes_text(self, meeting_id: str) -> dict:
+        """Texto cru da ata (para copiar no clipboard pela UI)."""
+        m = storage.get_meeting(meeting_id)
+        if m is None:
+            return {"error": "Reunião não encontrada."}
+        d = Path(m.dir_path)
+        return {"text": self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")}
+
+    def export_minutes(self, meeting_id: str) -> dict:
+        """Abre o diálogo 'Salvar como' e grava a ata (.md) no caminho escolhido."""
+        m = storage.get_meeting(meeting_id)
+        if m is None:
+            return {"error": "Reunião não encontrada."}
+        d = Path(m.dir_path)
+        minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+        if not minutes.strip():
+            return {"error": "Esta reunião não tem ata para exportar."}
+        if self.window is None:
+            return {"error": "Janela indisponível."}
+        subject = _derive_subject(minutes) or "ata"
+        safe = re.sub(r"[^\w\- ]", "", subject).strip()[:40] or "ata"
+        result = self.window.create_file_dialog(
+            webview.SAVE_DIALOG, save_filename=f"{safe}.md"
+        )
+        if not result:
+            return {"cancelled": True}
+        path = result if isinstance(result, str) else result[0]
+        try:
+            Path(path).write_text(minutes, encoding="utf-8")
+            return {"ok": True, "path": path}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def send_webhook(self, meeting_id: str) -> dict:
+        """Envia a ata para a URL de webhook configurada (Slack/Discord/Zapier)."""
+        url = (read_raw().get("webhook_url") or "").strip()
+        if not url:
+            return {"error": "Configure a URL de webhook em Configuração."}
+        m = storage.get_meeting(meeting_id)
+        if m is None:
+            return {"error": "Reunião não encontrada."}
+        d = Path(m.dir_path)
+        minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+        if not minutes.strip():
+            return {"error": "Esta reunião não tem ata para enviar."}
+        subject = _derive_subject(minutes) or "Ata da reunião"
+        disc = minutes if len(minutes) <= 1800 else minutes[:1800] + "\n… (ata completa no app)"
+        # Payload compatível com Slack ({text}) e Discord ({content}).
+        payload = {"text": f"*{subject}*\n\n{minutes}", "content": f"**{subject}**\n\n{disc}"}
+        try:
+            import httpx
+
+            r = httpx.post(url, json=payload, timeout=15)
+            r.raise_for_status()
+            return {"ok": True}
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"Falha ao enviar: {e}"}

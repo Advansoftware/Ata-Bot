@@ -29,6 +29,20 @@ configurar tudo por formulário e iniciar/parar o bot — sem editar arquivos à
    e um **player** para ouvir o áudio de cada participante. Enquanto uma reunião
    ainda processa, o card mostra o progresso por etapa (transcrevendo → gerando a ata).
 
+Além disso, o app tem:
+
+- **💬 Chat com as reuniões** — pergunte em linguagem natural sobre todo o histórico
+  (*"quais foram as decisões da semana?"*). As respostas **citam a reunião e o
+  momento exato**; clicar na citação abre a reunião e **toca o áudio naquele ponto**.
+  Também há um **balão de chat dentro de cada reunião** para perguntar só sobre ela.
+- **🗣️ Transcrição sincronizada** — clique em qualquer fala e o player pula para
+  aquele instante; a linha que está tocando fica destacada.
+- **🔎 Busca global** — procure um termo em assuntos, transcrições e atas.
+- **✅ Tarefas** — os itens de ação de todas as atas reunidos numa lista, com
+  estado de concluído que fica salvo.
+- **Compartilhar a ata** — copiar, exportar `.md` ou enviar por **webhook**
+  (Slack/Discord/Zapier).
+
 ## Provedores de ata (escolha na interface)
 
 | Provedor | Onde roda | Custo | Observação |

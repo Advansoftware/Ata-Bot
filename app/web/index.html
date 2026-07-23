@@ -293,6 +293,101 @@
   .pl-rate { flex-shrink: 0; background: rgba(255,255,255,.08); border: none; color: var(--muted); font-size: 11px; font-weight: 650; padding: 5px 8px; border-radius: 7px; }
   .pl-rate:hover { color: var(--text); background: rgba(255,255,255,.14); }
 
+  /* ---------- Transcrição sincronizada ---------- */
+  .transcript-body {
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px; margin-top: 8px; max-height: calc(100vh - 340px); overflow-y: auto;
+  }
+  .tline {
+    display: flex; gap: 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; line-height: 1.5; transition: background .1s;
+  }
+  .tline:hover { background: rgba(255,255,255,.05); }
+  .tline.active { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .tstamp { flex-shrink: 0; color: var(--accent-2); font-variant-numeric: tabular-nums; font-size: 11.5px; padding-top: 1px; font-family: ui-monospace, Menlo, monospace; }
+  .tspeaker { flex-shrink: 0; color: var(--muted); font-weight: 650; }
+  .ttext { color: var(--text); }
+  .tline.active .ttext { color: #fff; }
+
+  /* ---------- Chat ---------- */
+  .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 210px); }
+  .chat-msgs { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 2px 12px; }
+  .chat-empty { margin: auto; text-align: center; color: var(--muted); max-width: 460px; }
+  .chat-empty .big { font-size: 40px; margin-bottom: 8px; }
+  .chat-empty .ex { display: inline-block; margin: 4px; padding: 7px 12px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--border); cursor: pointer; font-size: 12.5px; color: var(--text); }
+  .chat-empty .ex:hover { border-color: var(--accent); }
+  .msg { max-width: 82%; padding: 12px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.65; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: var(--card-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.ai.markdown-body { max-height: none; }
+  .msg .cite {
+    display: inline-flex; align-items: center; gap: 4px; margin: 0 2px; padding: 1px 8px;
+    border-radius: 999px; background: var(--accent-soft); color: var(--accent-2);
+    font-size: 11px; font-weight: 650; cursor: pointer; border: 1px solid transparent; vertical-align: middle;
+  }
+  .msg .cite:hover { border-color: var(--accent); }
+  .chat-input-row { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .chat-input-row textarea {
+    flex: 1; resize: none; height: 44px; max-height: 140px; padding: 11px 14px; border-radius: 12px;
+    border: 1px solid var(--border-strong); background: var(--input); color: var(--text);
+    font-family: inherit; font-size: 13.5px; line-height: 1.4;
+  }
+  .chat-input-row textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .chat-scope { font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+  .typing { display: inline-flex; gap: 4px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+
+  /* ---------- Tarefas ---------- */
+  .task-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .task-row:last-child { border-bottom: none; }
+  .task-check { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; cursor: pointer; accent-color: var(--accent); }
+  .task-main { flex: 1; min-width: 0; }
+  .task-text { font-size: 13.5px; line-height: 1.5; }
+  .task-row.done .task-text { text-decoration: line-through; color: var(--muted); }
+  .task-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .task-meta .lnk { color: var(--accent-2); cursor: pointer; }
+  .task-meta .lnk:hover { text-decoration: underline; }
+
+  /* ---------- Balão de chat da reunião ---------- */
+  #chatBubble { position: fixed; right: 26px; bottom: 26px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+  .bubble-fab {
+    width: 56px; height: 56px; border-radius: 50%; padding: 0; font-size: 24px; border: none;
+    background: var(--grad-brand); color: #fff; box-shadow: 0 10px 28px -8px var(--violet);
+    display: grid; place-items: center;
+  }
+  .bubble-fab:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  #bubblePanel {
+    width: min(380px, calc(100vw - 52px)); height: 480px; max-height: calc(100vh - 120px);
+    background: var(--panel); border: 1px solid var(--border-strong); border-radius: 16px;
+    box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;
+    animation: fade .16s ease;
+  }
+  .bubble-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 650; background: var(--card); }
+  .bubble-x { background: transparent; border: none; color: var(--muted); font-size: 15px; padding: 2px 6px; cursor: pointer; }
+  .bubble-x:hover { color: var(--text); }
+  .bubble-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble-msgs .msg { max-width: 100%; font-size: 13px; }
+  .bubble-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--card); }
+  .bubble-input textarea { flex: 1; resize: none; height: 40px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--input); color: var(--text); font-family: inherit; font-size: 13px; line-height: 1.35; }
+  .bubble-input textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .bubble-input button { flex-shrink: 0; width: 40px; padding: 0; }
+
+  /* ---------- Busca no dashboard ---------- */
+  .mt-search { flex: 1; max-width: 340px; }
+  .mt-search input { padding: 8px 12px; font-size: 13px; }
+  .search-result {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+    cursor: pointer; margin-bottom: 10px; transition: border-color .12s, background .12s;
+  }
+  .search-result:hover { border-color: var(--border-strong); background: var(--card-2); }
+  .search-result .sr-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .search-result .sr-subj { font-weight: 650; font-size: 13.5px; }
+  .search-result .sr-where { font-size: 11px; color: var(--accent-2); font-weight: 650; }
+  .search-result .sr-snip { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .search-result mark { background: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--text); border-radius: 3px; padding: 0 2px; }
+
   /* ---------- Modal ---------- */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
@@ -339,6 +434,8 @@
     <div class="navlabel">Menu</div>
     <nav>
       <button class="navitem active" data-view="meetings"><span class="ic">📁</span><span class="lbl">Reuniões</span></button>
+      <button class="navitem" data-view="chat"><span class="ic">💬</span><span class="lbl">Chat</span></button>
+      <button class="navitem" data-view="tasks"><span class="ic">✅</span><span class="lbl">Tarefas</span></button>
       <button class="navitem" data-view="config"><span class="ic">⚙️</span><span class="lbl">Configuração</span></button>
       <button class="navitem" data-view="test"><span class="ic">🧪</span><span class="lbl">Teste rápido</span></button>
       <button class="navitem" data-view="logs"><span class="ic">📜</span><span class="lbl">Log</span></button>
@@ -368,9 +465,11 @@
         <!-- Lista -->
         <div id="meetingsList">
           <div class="mt-toolbar">
+            <div class="mt-search"><input id="meetingSearch" type="search" placeholder="🔎 Buscar em assuntos, transcrições e atas…" /></div>
             <button class="btn-ghost btn-tiny" id="refreshMeetings" type="button">🔄 Atualizar</button>
             <span class="count" id="meetingsCount"></span>
           </div>
+          <div id="searchResults" class="hidden"></div>
           <div id="meetingsGrid" class="mt-grid"></div>
           <div id="meetingsEmpty" class="mt-empty hidden">
             <div class="mt-empty-ic">📭</div>
@@ -386,6 +485,9 @@
             <h2 id="mdSubject"></h2>
             <div class="mt-meta" id="mdMeta"></div>
             <div class="mt-actions">
+              <button class="btn-ghost btn-tiny" id="copyMinutes" type="button">📋 Copiar ata</button>
+              <button class="btn-ghost btn-tiny" id="exportMinutes" type="button">⬇ Exportar</button>
+              <button class="btn-ghost btn-tiny" id="sendWebhook" type="button">📤 Enviar</button>
               <button class="btn-ghost btn-tiny" id="openFolder" type="button">📂 Abrir pasta</button>
               <button class="btn-danger btn-tiny" id="deleteMeeting" type="button">🗑 Apagar</button>
             </div>
@@ -397,8 +499,54 @@
           <div id="tabAta" class="mt-tabpane markdown-body"></div>
           <div id="tabTranscript" class="mt-tabpane hidden">
             <div id="audioPlayers"></div>
-            <pre id="transcriptText" class="transcript"></pre>
+            <div id="transcriptBody" class="transcript-body"></div>
           </div>
+
+          <!-- Balão de chat desta reunião -->
+          <div id="chatBubble">
+            <div id="bubblePanel" class="hidden">
+              <div class="bubble-head">
+                <span>💬 Perguntar sobre esta reunião</span>
+                <button id="bubbleClose" class="bubble-x" type="button">✕</button>
+              </div>
+              <div id="bubbleMsgs" class="bubble-msgs"></div>
+              <div class="bubble-input">
+                <textarea id="bubbleInput" placeholder="Ex.: o que ficou decidido?"></textarea>
+                <button class="btn-primary" id="bubbleSend" type="button">➤</button>
+              </div>
+            </div>
+            <button id="bubbleFab" class="bubble-fab" type="button" title="Perguntar sobre esta reunião">💬</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CHAT ===================== -->
+      <section class="view hidden" data-view="chat">
+        <div class="chat-wrap">
+          <div class="chat-scope">💡 Pergunte sobre <b>todas as suas reuniões</b>. As respostas citam a reunião e o momento — clique para ver e ouvir.</div>
+          <div id="chatMsgs" class="chat-msgs"></div>
+          <div class="chat-input-row">
+            <textarea id="chatInput" placeholder="Pergunte algo sobre suas reuniões… (Enter envia, Shift+Enter quebra linha)"></textarea>
+            <button class="btn-primary" id="chatSend" type="button">Enviar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TAREFAS ===================== -->
+      <section class="view hidden" data-view="tasks">
+        <div class="card">
+          <div class="card-head">
+            <h2>✅ Itens de ação</h2>
+            <p>Reunidos de todas as atas. Marque como concluído — o estado fica salvo.</p>
+          </div>
+          <div class="mt-toolbar">
+            <button class="btn-ghost btn-tiny" id="refreshTasks" type="button">🔄 Atualizar</button>
+            <label style="display:flex;align-items:center;gap:7px;margin:0;cursor:pointer;color:var(--muted);font-size:12.5px;">
+              <input id="hideDone" type="checkbox" style="width:auto;" /> Ocultar concluídos
+            </label>
+            <span class="count" id="tasksCount"></span>
+          </div>
+          <div id="tasksList"></div>
         </div>
       </section>
 
@@ -437,6 +585,11 @@
                 <button class="btn-ghost" id="clearDirBtn" type="button" title="Voltar ao padrão">Limpar</button>
               </div>
               <div class="hint">Cada reunião vira uma subpasta com áudio por participante, <code>transcript.txt</code> e <code>minutes.md</code>.</div>
+            </div>
+            <div class="field">
+              <label for="webhookUrl">Webhook para enviar a ata (opcional)</label>
+              <input id="webhookUrl" placeholder="https://hooks.slack.com/…  ou  https://discord.com/api/webhooks/…" autocomplete="off" />
+              <div class="hint">Usado pelo botão <b>Enviar</b> na reunião. Compatível com Slack, Discord e Zapier.</div>
             </div>
           </div>
 
@@ -613,6 +766,8 @@
   // ---- Views / navegação ----
   const VIEW_META = {
     meetings: ["Reuniões", "Suas reuniões gravadas — abra para ver a ata e a transcrição."],
+    chat: ["Chat", "Pergunte à IA sobre o histórico das suas reuniões."],
+    tasks: ["Tarefas", "Itens de ação reunidos de todas as atas."],
     config: ["Configuração", "Conecte o Discord, escolha o idioma, o modelo e o provedor da ata."],
     test: ["Teste rápido", "Valide gravação → transcrição → ata sem precisar do Discord."],
     logs: ["Log", "Atividade do bot e do processamento em tempo real."],
@@ -624,6 +779,8 @@
     $("#viewDesc").textContent = VIEW_META[v][1];
     $("#saveBtn").classList.toggle("hidden", v !== "config");
     if (v === "meetings") { showMeetingList(); loadMeetings(); }
+    if (v === "chat") initChat();
+    if (v === "tasks") loadTasks();
   }
   document.querySelectorAll(".navitem").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
 
@@ -831,6 +988,7 @@
     $("#whDevice").value = (s.transcription && s.transcription.device) || "cpu";
     $("#outDir").value = s.output_dir || "";
     $("#outDir").placeholder = s.output_dir ? "" : `(padrão: ${s.default_output_dir})`;
+    $("#webhookUrl").value = s.webhook_url || "";
 
     provSel.value = s.minutes.provider || "claude";
     showProvider(provSel.value);
@@ -858,6 +1016,7 @@
       language: $("#lang").value || "pt",
       post_to_discord: $("#postToDiscord").checked,
       output_dir: $("#outDir").value,
+      webhook_url: $("#webhookUrl").value,
       mic_device: micVal === "" ? null : Number(micVal),
       transcription: { model: $("#whModel").value, device: device, compute_type: device === "cuda" ? "float16" : "int8" },
       minutes: { provider: provSel.value },
@@ -1024,6 +1183,9 @@
   function showMeetingList() {
     currentMeetingId = null;
     stopAllPlayers();
+    const sb = $("#meetingSearch"); if (sb) sb.value = "";
+    $("#searchResults").classList.add("hidden");
+    $("#meetingsGrid").classList.remove("hidden");
     $("#meetingDetail").classList.add("hidden");
     $("#meetingsList").classList.remove("hidden");
   }
@@ -1045,7 +1207,10 @@
     else stopMeetingsPoll();
   }
 
-  async function openMeeting(id) {
+  let currentSegments = [];
+  const playersByStem = {};
+
+  async function openMeeting(id, opts) {
     stopMeetingsPoll();
     stopAllPlayers();
     currentMeetingId = id;
@@ -1065,12 +1230,16 @@
     ].filter(Boolean).join("");
     $("#tabAta").innerHTML = m.minutes ? renderMarkdown(m.minutes)
       : '<p style="color:var(--muted)">Ata ainda não gerada para esta reunião.</p>';
-    $("#transcriptText").textContent = m.transcript || "(sem transcrição)";
+    currentSegments = m.segments || [];
     buildPlayers(m.audio_files);
-    switchTab("ata");
+    buildTranscript(currentSegments, m.transcript);
+    resetBubble();  // zera o chat do balão desta reunião
+    const seek = (opts && opts.seek != null) ? opts.seek : null;
+    if (seek != null) { switchTab("transcript"); seekTo(seek, true); }
+    else switchTab("ata");
   }
 
-  // ---- Player de áudio ----
+  // ---- Player de áudio + transcrição sincronizada ----
   const RATES = [1, 1.25, 1.5, 2];
   function fmtClock(s) {
     if (!isFinite(s) || s < 0) s = 0;
@@ -1080,6 +1249,7 @@
   function buildPlayers(audioFiles) {
     const box = $("#audioPlayers");
     box.innerHTML = "";
+    for (const k in playersByStem) delete playersByStem[k];
     const files = (audioFiles || []).filter(f => f.url);
     if (!files.length) return;
     const wrap = document.createElement("div");
@@ -1110,6 +1280,7 @@
     const time = el.querySelector(".pl-time");
     const rate = el.querySelector(".pl-rate");
     let rateIdx = 0;
+    playersByStem[f.stem] = audio;
     const upd = () => {
       const cur = audio.currentTime || 0, dur = audio.duration || 0;
       fill.style.width = dur ? (cur / dur * 100) + "%" : "0%";
@@ -1117,14 +1288,14 @@
     };
     play.addEventListener("click", () => {
       if (audio.paused) {
-        document.querySelectorAll("#audioPlayers audio").forEach(a => { if (a !== audio) a.pause(); });
+        Object.values(playersByStem).forEach(a => { if (a !== audio) a.pause(); });
         audio.play().catch(() => { });
       } else audio.pause();
     });
     audio.addEventListener("play", () => { play.textContent = "❚❚"; });
     audio.addEventListener("pause", () => { play.textContent = "▶"; });
     audio.addEventListener("ended", () => { play.textContent = "▶"; });
-    audio.addEventListener("timeupdate", upd);
+    audio.addEventListener("timeupdate", () => { upd(); setActiveLine(audio.currentTime); });
     audio.addEventListener("loadedmetadata", upd);
     audio.addEventListener("error", () => { play.disabled = true; time.textContent = "indisponível"; });
     bar.addEventListener("click", (e) => {
@@ -1138,6 +1309,49 @@
       rate.textContent = RATES[rateIdx] + "×";
     });
     return el;
+  }
+
+  // Transcrição clicável, sincronizada com o áudio.
+  function buildTranscript(segments, rawText) {
+    const box = $("#transcriptBody");
+    if (!segments || !segments.length) {
+      box.innerHTML = `<pre class="transcript" style="border:none;background:transparent;margin:0;max-height:none">${escapeHtml(rawText || "(sem transcrição)")}</pre>`;
+      return;
+    }
+    box.innerHTML = segments.map((s, i) =>
+      `<div class="tline" data-i="${i}" data-stem="${escapeHtml(s.speaker)}" data-start="${s.start}">
+         <span class="tstamp">${fmtClock(s.start)}</span>
+         <span class="tspeaker">${escapeHtml(s.speaker.replace(/_/g, " "))}:</span>
+         <span class="ttext">${escapeHtml(s.text)}</span>
+       </div>`).join("");
+    box.querySelectorAll(".tline").forEach(el => el.addEventListener("click", () => {
+      seekStem(el.dataset.stem, parseFloat(el.dataset.start), true);
+    }));
+  }
+  function setActiveLine(seconds) {
+    const lines = $("#transcriptBody").querySelectorAll(".tline");
+    if (!lines.length) return;
+    let idx = -1;
+    for (let i = 0; i < currentSegments.length; i++) {
+      if (currentSegments[i].start <= seconds + 0.25) idx = i; else break;
+    }
+    lines.forEach((el, i) => el.classList.toggle("active", i === idx));
+    if (idx >= 0 && lines[idx]) lines[idx].scrollIntoView({ block: "nearest" });
+  }
+  function seekStem(stem, seconds, play) {
+    let audio = playersByStem[stem];
+    if (!audio) { const ks = Object.keys(playersByStem); if (ks.length) audio = playersByStem[ks[0]]; }
+    if (audio) {
+      Object.values(playersByStem).forEach(a => { if (a !== audio) a.pause(); });
+      const doSeek = () => { try { audio.currentTime = seconds; } catch (e) { } if (play) audio.play().catch(() => { }); };
+      if (audio.readyState >= 1) doSeek(); else audio.addEventListener("loadedmetadata", doSeek, { once: true });
+    }
+    setActiveLine(seconds);
+  }
+  function seekTo(seconds, play) {
+    let stem = null;
+    for (const s of currentSegments) { if (s.start <= seconds) stem = s.speaker; else break; }
+    seekStem(stem, seconds, play);
   }
 
   // ---- Modal de confirmação (Promise<boolean>) ----
@@ -1239,6 +1453,166 @@
     }
     return out.join("\n");
   }
+
+  // ==================== Chat (reutilizável) ====================
+  function renderCitations(html) {
+    return html.replace(/\[\[([0-9a-fA-F]{6,})@(\d{2}):(\d{2}):(\d{2})\]\]/g, (mm, id, h, mi, s) =>
+      `<span class="cite" data-id="${id}" data-sec="${(+h) * 3600 + (+mi) * 60 + (+s)}">▶ ${h}:${mi}:${s}</span>`);
+  }
+  function appendMsg(msgsEl, cls, html) {
+    const el = document.createElement("div"); el.className = "msg " + cls; el.innerHTML = html;
+    msgsEl.appendChild(el); msgsEl.scrollTop = msgsEl.scrollHeight; return el;
+  }
+  async function askAndRender(question, meetingId, msgsEl, onCite) {
+    appendMsg(msgsEl, "user", escapeHtml(question));
+    const thinking = appendMsg(msgsEl, "ai", '<span class="typing"><i></i><i></i><i></i></span>');
+    let r;
+    try { r = await window.pywebview.api.ask_meetings(question, meetingId); } catch (e) { r = { error: String(e) }; }
+    if (r.error) { thinking.innerHTML = `<span style="color:var(--danger)">${escapeHtml(r.error)}</span>`; msgsEl.scrollTop = msgsEl.scrollHeight; return; }
+    thinking.classList.add("markdown-body");
+    thinking.innerHTML = renderCitations(renderMarkdown(r.answer || "(sem resposta)"));
+    thinking.querySelectorAll(".cite").forEach(el => el.addEventListener("click", () => onCite(el.dataset.id, parseFloat(el.dataset.sec))));
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  // ---- Chat global (aba) ----
+  let chatBusy = false;
+  const CHAT_EXAMPLES = ["Quais foram as decisões?", "O que ficou pendente?", "Resuma minhas últimas reuniões", "Quais tarefas ficaram para mim?"];
+  function initChat() { if (!$("#chatMsgs").children.length) renderChatEmpty(); }
+  function renderChatEmpty() {
+    $("#chatMsgs").innerHTML = `<div class="chat-empty"><div class="big">💬</div>
+      <div>Pergunte qualquer coisa sobre suas reuniões gravadas.</div>
+      <div style="margin-top:12px">${CHAT_EXAMPLES.map(e => `<span class="ex">${escapeHtml(e)}</span>`).join("")}</div></div>`;
+    $("#chatMsgs").querySelectorAll(".ex").forEach(el => el.addEventListener("click", () => { $("#chatInput").value = el.textContent; sendChat(); }));
+  }
+  async function sendChat() {
+    if (chatBusy) return;
+    const q = $("#chatInput").value.trim(); if (!q) return;
+    const empty = $("#chatMsgs").querySelector(".chat-empty"); if (empty) empty.remove();
+    $("#chatInput").value = "";
+    chatBusy = true; $("#chatSend").disabled = true;
+    await askAndRender(q, null, $("#chatMsgs"), goToCitation);
+    chatBusy = false; $("#chatSend").disabled = false;
+  }
+  $("#chatSend").addEventListener("click", sendChat);
+  $("#chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  function goToCitation(id, seconds) { switchView("meetings"); openMeeting(id, { seek: seconds }); }
+
+  // ---- Balão de chat dentro da reunião ----
+  let bubbleBusy = false;
+  function resetBubble() { $("#bubbleMsgs").innerHTML = ""; $("#bubblePanel").classList.add("hidden"); }
+  $("#bubbleFab").addEventListener("click", () => {
+    const p = $("#bubblePanel"); p.classList.toggle("hidden");
+    if (!p.classList.contains("hidden")) {
+      if (!$("#bubbleMsgs").children.length)
+        appendMsg($("#bubbleMsgs"), "ai", "Pergunte sobre <b>esta reunião</b> — vou citar o momento exato para você ouvir. 🎧");
+      $("#bubbleInput").focus();
+    }
+  });
+  $("#bubbleClose").addEventListener("click", () => $("#bubblePanel").classList.add("hidden"));
+  async function sendBubble() {
+    if (bubbleBusy || !currentMeetingId) return;
+    const q = $("#bubbleInput").value.trim(); if (!q) return;
+    $("#bubbleInput").value = "";
+    bubbleBusy = true; $("#bubbleSend").disabled = true;
+    await askAndRender(q, currentMeetingId, $("#bubbleMsgs"), inMeetingCite);
+    bubbleBusy = false; $("#bubbleSend").disabled = false;
+  }
+  function inMeetingCite(id, seconds) {
+    if (id === currentMeetingId) { switchTab("transcript"); seekTo(seconds, true); }
+    else goToCitation(id, seconds);
+  }
+  $("#bubbleSend").addEventListener("click", sendBubble);
+  $("#bubbleInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendBubble(); } });
+
+  // ==================== Busca no dashboard ====================
+  let searchTimer = null;
+  function highlightTerm(text, term) {
+    const esc = escapeHtml(text);
+    if (!term) return esc;
+    try { return esc.replace(new RegExp("(" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig"), "<mark>$1</mark>"); }
+    catch (e) { return esc; }
+  }
+  async function runSearch(q) {
+    const grid = $("#meetingsGrid"), results = $("#searchResults"), empty = $("#meetingsEmpty");
+    if (!q.trim()) { results.classList.add("hidden"); results.innerHTML = ""; grid.classList.remove("hidden"); loadMeetings(); return; }
+    grid.classList.add("hidden"); empty.classList.add("hidden");
+    let list = [];
+    try { list = await window.pywebview.api.search_meetings(q); } catch (e) { list = []; }
+    results.classList.remove("hidden");
+    $("#meetingsCount").textContent = `${list.length} resultado(s) para “${q}”`;
+    if (!list.length) { results.innerHTML = `<div class="mt-empty" style="padding:40px"><div class="mt-empty-ic">🔎</div><h3>Nada encontrado</h3></div>`; return; }
+    results.innerHTML = list.map(r => `<div class="search-result" data-id="${r.id}">
+      <div class="sr-top"><span class="sr-subj">${escapeHtml(r.subject)}</span><span class="sr-where">em ${r.where}</span></div>
+      <div class="sr-snip">${highlightTerm(r.snippet, q)}</div>
+      <div class="mt-card-date" style="margin-top:6px">🗓️ ${fmtDateTime(r.started_at)}</div>
+    </div>`).join("");
+    results.querySelectorAll(".search-result").forEach(el => el.addEventListener("click", () => openMeeting(el.dataset.id)));
+  }
+  $("#meetingSearch").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    const q = e.target.value;
+    searchTimer = setTimeout(() => runSearch(q), 250);
+  });
+
+  // ==================== Tarefas (itens de ação) ====================
+  let allTasks = [];
+  async function loadTasks() {
+    try { allTasks = await window.pywebview.api.list_action_items(); } catch (e) { allTasks = []; }
+    renderTasks();
+  }
+  function renderTasks() {
+    const hideDone = $("#hideDone").checked;
+    const shown = hideDone ? allTasks.filter(i => !i.done) : allTasks;
+    const doneCount = allTasks.filter(i => i.done).length;
+    $("#tasksCount").textContent = allTasks.length ? `${allTasks.length} item(ns) · ${doneCount} concluído(s)` : "";
+    const box = $("#tasksList");
+    if (!shown.length) {
+      box.innerHTML = `<div class="mt-empty" style="padding:50px"><div class="mt-empty-ic">📝</div><h3>${allTasks.length ? "Tudo concluído 🎉" : "Nenhum item de ação"}</h3><p>Os itens de ação das atas aparecem aqui.</p></div>`;
+      return;
+    }
+    box.innerHTML = shown.map(t => `<div class="task-row ${t.done ? "done" : ""}" data-id="${t.id}">
+      <input class="task-check" type="checkbox" ${t.done ? "checked" : ""} />
+      <div class="task-main">
+        <div class="task-text">${escapeHtml(t.text)}</div>
+        <div class="task-meta"><span>📁 ${escapeHtml(t.subject)}</span><span>🗓️ ${fmtDateTime(t.started_at)}</span><span class="lnk" data-go="${t.meeting_id}">abrir reunião ↗</span></div>
+      </div></div>`).join("");
+    box.querySelectorAll(".task-check").forEach(cb => cb.addEventListener("change", async () => {
+      const id = cb.closest(".task-row").dataset.id;
+      await window.pywebview.api.set_action_done(id, cb.checked);
+      const it = allTasks.find(x => x.id === id); if (it) it.done = cb.checked;
+      renderTasks();
+    }));
+    box.querySelectorAll(".lnk[data-go]").forEach(el => el.addEventListener("click", () => { switchView("meetings"); openMeeting(el.dataset.go); }));
+  }
+  $("#refreshTasks").addEventListener("click", loadTasks);
+  $("#hideDone").addEventListener("change", renderTasks);
+
+  // ==================== Compartilhar a ata ====================
+  $("#copyMinutes").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const r = await window.pywebview.api.get_minutes_text(currentMeetingId);
+    const text = (r && r.text) || "";
+    if (!text.trim()) { toast("Sem ata para copiar."); return; }
+    try { await navigator.clipboard.writeText(text); toast("✅ Ata copiada."); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); toast("✅ Ata copiada."); } catch (_) { toast("Não consegui copiar."); }
+      ta.remove();
+    }
+  });
+  $("#exportMinutes").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const r = await window.pywebview.api.export_minutes(currentMeetingId);
+    if (r.ok) toast("✅ Ata exportada."); else if (r.error) toast(r.error);
+  });
+  $("#sendWebhook").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const btn = $("#sendWebhook"); btn.disabled = true; btn.textContent = "Enviando…";
+    const r = await window.pywebview.api.send_webhook(currentMeetingId);
+    btn.disabled = false; btn.textContent = "📤 Enviar";
+    toast(r.ok ? "✅ Ata enviada." : (r.error || "Falha ao enviar."));
+  });
 
   async function refresh() {
     try { const st = await window.pywebview.api.status(); setStatus(st.running); }

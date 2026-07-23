@@ -50,6 +50,8 @@ DEFAULTS = {
     "post_to_discord": True,
     # Pasta onde as reuniões são salvas. Vazio = data/meetings (dentro do projeto).
     "output_dir": "",
+    # URL de webhook para enviar a ata ao terminar/compartilhar (Slack/Discord/Zapier).
+    "webhook_url": "",
     # Índice do microfone para o teste rápido (None = dispositivo padrão do SO).
     "mic_device": None,
     "transcription": {"model": "small", "device": "cpu", "compute_type": "int8"},
@@ -143,6 +145,7 @@ def _merge_defaults(data: dict) -> dict:
     out["language"] = data.get("language", "pt")
     out["post_to_discord"] = bool(data.get("post_to_discord", True))
     out["output_dir"] = data.get("output_dir", "")
+    out["webhook_url"] = data.get("webhook_url", "")
     out["mic_device"] = data.get("mic_device", None)
     out["transcription"].update(data.get("transcription", {}))
     mn = data.get("minutes", {})
