@@ -61,7 +61,19 @@ class Pipeline:
             status="done",
             minutes_path=str(minutes_path),
         )
-        return storage.get_meeting(meeting.id)  # type: ignore[return-value]
+        updated = storage.get_meeting(meeting.id)
+
+        # Última etapa: indexa a transcrição para o RAG (chat global), em background
+        # e à prova de falhas — não deve atrapalhar o término da reunião.
+        try:
+            import threading
+
+            from core import rag
+
+            threading.Thread(target=rag.index_meeting, args=(updated,), daemon=True).start()
+        except Exception:  # noqa: BLE001
+            pass
+        return updated  # type: ignore[return-value]
 
     def _transcribe(
         self, tracks: dict[str, Path], on_step: Optional[StepCB] = None

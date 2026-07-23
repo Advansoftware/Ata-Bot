@@ -14,6 +14,7 @@ py-cord[voice]==2.8.0    # bot de Discord com voice receive + PyNaCl + davey (DA
 audioop-lts>=0.2 ; python_version >= "3.13"
 faster-whisper>=1.0      # transcrição local (roda em CPU ou GPU)
 sounddevice>=0.4         # captura do microfone (botão de teste sem Discord)
+fastembed>=0.5           # embeddings locais p/ o RAG do chat global (usa onnxruntime, roda em CPU)
 
 # --- Provedores de geração da ata (todos incluídos; escolha qual usar na interface) ---
 anthropic>=0.40          # provider = "claude" (API da Anthropic)

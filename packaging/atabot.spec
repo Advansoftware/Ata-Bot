@@ -34,7 +34,7 @@ datas, binaries, hiddenimports = [], [], []
 for pkg in [
     "faster_whisper", "av", "ctranslate2", "sounddevice", "onnxruntime",
     "webview", "anthropic", "openai", "google.genai", "httpx",
-    "huggingface_hub", "tokenizers",
+    "huggingface_hub", "tokenizers", "fastembed",
 ]:
     try:
         d, b, h = collect_all(pkg)

@@ -540,19 +540,9 @@ class Api:
 
     # ---- Chat com as reuniões (pergunta à IA sobre o histórico) ----
 
-    def ask_meetings(self, question: str, meeting_id: str | None = None) -> dict:
-        """Responde uma pergunta usando as transcrições (todas ou de uma reunião)."""
-        question = (question or "").strip()
-        if not question:
-            return {"error": "Digite uma pergunta."}
-        cfg = Config.load()
-        if not cfg.provider_ready():
-            return {"error": "Configure um provedor de IA (com chave) para usar o chat."}
-
-        meetings = (
-            [storage.get_meeting(meeting_id)] if meeting_id else storage.list_meetings(limit=200)
-        )
-        budget, blocks, used = 60000, [], 0
+    def _full_context_blocks(self, meetings: list, budget: int = 60000) -> tuple[list, int]:
+        """Modo antigo (fallback): empilha transcrições inteiras até o orçamento."""
+        blocks, used = [], 0
         for m in meetings:
             if m is None:
                 continue
@@ -562,8 +552,6 @@ class Api:
                 continue
             minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
             subject = _derive_subject(minutes) or "Reunião"
-            # O id da reunião vai no cabeçalho para a IA poder citar a fonte, e o
-            # transcript mantém os [HH:MM:SS] para citar o momento exato.
             block = f"### {subject} ({m.started_at[:10]}) — id={m.id}\n{tr}"
             room = budget - sum(len(b) for b in blocks)
             if len(block) > room:
@@ -573,6 +561,47 @@ class Api:
                 break
             blocks.append(block)
             used += 1
+        return blocks, used
+
+    def ask_meetings(self, question: str, meeting_id: str | None = None) -> dict:
+        """Responde uma pergunta com base nas transcrições.
+
+        - Reunião específica (balão): usa a transcrição inteira daquela reunião.
+        - Chat global: usa RAG (recupera só os trechos relevantes de todas as
+          reuniões) para não enviar tudo à IA e gastar token à toa. Se o RAG não
+          estiver disponível, cai no modo antigo (transcrições inteiras).
+        """
+        question = (question or "").strip()
+        if not question:
+            return {"error": "Digite uma pergunta."}
+        cfg = Config.load()
+        if not cfg.provider_ready():
+            return {"error": "Configure um provedor de IA (com chave) para usar o chat."}
+
+        mode = "full"
+        if meeting_id:
+            blocks, used = self._full_context_blocks([storage.get_meeting(meeting_id)])
+        else:
+            from core import rag
+
+            hits = rag.search(question, storage.list_meetings(limit=500), top_k=8)
+            if hits is not None:  # RAG disponível
+                mode = "rag"
+                blocks, seen = [], set()
+                for h in hits:
+                    m = storage.get_meeting(h["meeting_id"])
+                    if m is None:
+                        continue
+                    seen.add(m.id)
+                    minutes = self._read_text(m.minutes_path) or self._read_text(
+                        Path(m.dir_path) / "minutes.md"
+                    )
+                    subject = _derive_subject(minutes) or "Reunião"
+                    blocks.append(f"### {subject} ({m.started_at[:10]}) — id={m.id}\n{h['text']}")
+                used = len(seen)
+            else:  # sem fastembed: modo antigo
+                blocks, used = self._full_context_blocks(storage.list_meetings(limit=200))
+
         if not blocks:
             return {"error": "Nenhuma transcrição disponível para consultar."}
 
@@ -594,7 +623,7 @@ class Api:
             answer = get_provider(cfg.minutes).complete(system, user, max_tokens=1500)
         except Exception as e:  # noqa: BLE001
             return {"error": f"Erro ao consultar a IA: {e}"}
-        return {"answer": answer, "meetings_used": used}
+        return {"answer": answer, "meetings_used": used, "mode": mode}
 
     # ---- Busca global ----
 
