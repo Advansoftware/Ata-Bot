@@ -13,6 +13,15 @@ if [ -z "$PY" ]; then
   echo "❌ Python não encontrado. Instale o Python 3.11–3.14."
   exit 1
 fi
+
+# Guarda a versão mínima. Sem isto, no macOS o loop cai no "python3" do sistema
+# (que é o 3.9) e o pip falha: o py-cord 2.8.0 exige Python 3.10+.
+if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 11) else 1)'; then
+  echo "❌ $($PY --version) é antigo demais — precisamos do Python 3.11–3.14."
+  echo "   macOS:          brew install python@3.14   (ou baixe em python.org)"
+  echo "   Debian/Ubuntu:  sudo apt install python3.12"
+  exit 1
+fi
 echo "▶ Usando $($PY --version)"
 
 # No Linux, duas libs de SISTEMA são necessárias (o pip não as instala, porque
