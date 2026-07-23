@@ -160,6 +160,22 @@ def list_meetings(limit: int = 50) -> list[Meeting]:
     return [_row_to_meeting(r) for r in rows]
 
 
+def delete_meeting(meeting_id: str) -> bool:
+    """Remove a reunião do índice e apaga a pasta em disco. True se existia."""
+    import shutil
+
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return False
+    with _connect() as conn:
+        conn.execute("DELETE FROM meetings WHERE id = ?", (meeting_id,))
+    # Só apaga a pasta se ela realmente for a desta reunião (evita acidentes).
+    d = meeting.dir
+    if d.exists() and d.name == meeting_id:
+        shutil.rmtree(d, ignore_errors=True)
+    return True
+
+
 def _row_to_meeting(row: sqlite3.Row) -> Meeting:
     dir_path = row["dir_path"] or str(DATA_DIR / "meetings" / row["id"])
     return Meeting(

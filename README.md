@@ -24,6 +24,10 @@ configurar tudo por formulário e iniciar/parar o bot — sem editar arquivos à
 3. A transcrição roda **localmente** (faster-whisper), com áudio separado por
    participante — a ata sai já sabendo quem falou o quê.
 4. A ata é gerada pelo provedor escolhido e postada no chat (+ arquivo `.md`).
+5. Tudo fica no **dashboard "Reuniões"** do próprio app: cada reunião vira um card
+   (assunto, data e hora); ao abrir, você vê a **ata formatada**, a **transcrição**
+   e um **player** para ouvir o áudio de cada participante. Enquanto uma reunião
+   ainda processa, o card mostra o progresso por etapa (transcrevendo → gerando a ata).
 
 ## Provedores de ata (escolha na interface)
 
@@ -111,9 +115,10 @@ bot/            # camada do Discord
   pipeline.py     # transcrever -> gerar ata -> salvar
   factory.py      # monta o bot
 app/            # app desktop nativo (pywebview)
-  web/index.html  # a interface (HTML/CSS/JS)
-  api.py          # ponte Python <-> UI
+  web/index.html  # a interface (HTML/CSS/JS): config, teste, log e dashboard de reuniões
+  api.py          # ponte Python <-> UI (config, modelos, teste e listagem de reuniões)
   botrunner.py    # inicia/para o bot em thread própria
+  audioserver.py  # servidor HTTP local (só localhost) que serve os .wav para o player
 ```
 
 O `core/` não depende do Discord de propósito: o painel/relatórios futuros

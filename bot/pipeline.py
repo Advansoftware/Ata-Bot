@@ -32,47 +32,62 @@ class Pipeline:
         tracks: dict[str, Path],
         on_step: Optional[StepCB] = None,
     ) -> storage.Meeting:
-        """tracks: {nome_do_falante: caminho_do_wav}. Retorna a reunião atualizada."""
+        """tracks: {nome_do_falante: caminho_do_wav}. Retorna a reunião atualizada.
+
+        As etapas são persistidas em disco à medida que terminam (transcript.txt
+        assim que a transcrição fica pronta, minutes.md ao final), para o dashboard
+        conseguir mostrar em qual etapa a reunião está enquanto processa.
+        """
         storage.update_meeting(meeting.id, status="processing", ended_at=True)
+        transcript_path = meeting.dir / "transcript.txt"
+        minutes_path = meeting.dir / "minutes.md"
         try:
-            transcript, minutes = await asyncio.to_thread(
-                self._run_sync, meeting, tracks, on_step
+            # 1) Transcrição — salva o transcript.txt assim que fica pronto.
+            transcript = await asyncio.to_thread(self._transcribe, tracks, on_step)
+            transcript_path.write_text(transcript, encoding="utf-8")
+            storage.update_meeting(meeting.id, transcript_path=str(transcript_path))
+
+            # 2) Geração da ata.
+            minutes = await asyncio.to_thread(
+                self._generate, meeting, tracks, transcript, on_step
             )
+            minutes_path.write_text(minutes, encoding="utf-8")
         except Exception:
             storage.update_meeting(meeting.id, status="error")
             raise
 
-        transcript_path = meeting.dir / "transcript.txt"
-        minutes_path = meeting.dir / "minutes.md"
-        transcript_path.write_text(transcript, encoding="utf-8")
-        minutes_path.write_text(minutes, encoding="utf-8")
-
         storage.update_meeting(
             meeting.id,
             status="done",
-            transcript_path=str(transcript_path),
             minutes_path=str(minutes_path),
         )
         return storage.get_meeting(meeting.id)  # type: ignore[return-value]
 
-    def _run_sync(
-        self,
-        meeting: storage.Meeting,
-        tracks: dict[str, Path],
-        on_step: Optional[StepCB] = None,
-    ) -> tuple[str, str]:
+    def _transcribe(
+        self, tracks: dict[str, Path], on_step: Optional[StepCB] = None
+    ) -> str:
+        """Etapa 1: transcreve as faixas (roda em thread). Só depois da gravação."""
         step = on_step or (lambda _k, _d="": None)
 
-        # 1) Transcrição (só depois da gravação encerrada), faixa por faixa.
         def _on_track(done, total, speaker):
             step("transcribe", f"{done}/{total} — {speaker}")
 
         segments = self.transcriber.transcribe_meeting(
             tracks, self.language, on_track=_on_track
         )
-        transcript = render_transcript(segments)
+        return render_transcript(segments)
 
-        # 2) Geração da ata: lê provedor/chave atuais (mudanças valem sem reiniciar).
+    def _generate(
+        self,
+        meeting: storage.Meeting,
+        tracks: dict[str, Path],
+        transcript: str,
+        on_step: Optional[StepCB] = None,
+    ) -> str:
+        """Etapa 2: gera a ata a partir do transcript (roda em thread)."""
+        step = on_step or (lambda _k, _d="": None)
+
+        # Lê provedor/chave atuais (mudanças valem sem reiniciar).
         cfg = Config.load()
         provider = get_provider(cfg.minutes)
         meta = MeetingMeta(
@@ -91,4 +106,4 @@ class Pipeline:
         step("generate", "escrevendo a ata")
         minutes = provider.generate(prepared, meta)
         step("done", "")
-        return transcript, minutes
+        return minutes

@@ -188,6 +188,125 @@
     border: 1px solid var(--border);
   }
 
+  /* ---------- Reuniões (dashboard) ---------- */
+  .mt-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .mt-toolbar .count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .mt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+  .mt-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px; cursor: pointer; text-align: left; width: 100%;
+    height: 168px;  /* altura fixa: todos os cards ficam iguais */
+    box-shadow: var(--shadow-sm); transition: border-color .14s, transform .06s, background .14s;
+    display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  }
+  .mt-card:hover { border-color: var(--border-strong); background: var(--card-2); }
+  .mt-card:active { transform: translateY(1px); }
+  .mt-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .mt-card-subject {
+    font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; min-height: 2.8em;
+  }
+  .mt-card-date { font-size: 12px; color: var(--muted); font-weight: 550; display: flex; align-items: center; gap: 6px; }
+  .mt-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+  .mt-mini-steps { margin-top: auto; }
+  .mt-parts { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); font-weight: 550; min-width: 0; }
+  .mt-parts .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .st { font-size: 10.5px; padding: 2px 9px; border-radius: 999px; font-weight: 650; white-space: nowrap; border: 1px solid var(--border-strong); color: var(--muted); }
+  .st.done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .st.processing { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .st.recording { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .st.error { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+
+  /* Mini-stepper de processamento no card */
+  .mt-mini-steps { display: flex; flex-wrap: wrap; gap: 7px 14px; align-items: center; padding-top: 2px; }
+  .ms { font-size: 11.5px; color: var(--faint); font-weight: 550; display: inline-flex; align-items: center; gap: 5px; }
+  .ms.done { color: var(--muted); }
+  .ms.active { color: var(--text); }
+  .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); display: inline-block; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .mt-empty { text-align: center; padding: 70px 20px; color: var(--muted); }
+  .mt-empty-ic { font-size: 46px; margin-bottom: 8px; }
+  .mt-empty h3 { margin: 0 0 6px; font-size: 17px; color: var(--text); font-weight: 700; }
+  .mt-empty p { margin: 0 auto 18px; max-width: 380px; font-size: 13px; }
+
+  /* Detalhe da reunião */
+  .mt-detail-head { margin: 14px 0 18px; }
+  .mt-detail-head h2 { font-size: 21px; font-weight: 750; letter-spacing: -.02em; margin: 12px 0 8px; line-height: 1.3; }
+  .mt-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); font-weight: 550; }
+  .mt-meta span { display: flex; align-items: center; gap: 6px; }
+  .mt-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .mt-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .mt-tab {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-weight: 600; font-size: 13px; padding: 10px 14px; border-radius: 0; cursor: pointer;
+  }
+  .mt-tab:hover { color: var(--text); }
+  .mt-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .mt-tabpane { padding: 8px 2px; }
+  .transcript {
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin: 8px 0 0; font-size: 12.5px; line-height: 1.7; white-space: pre-wrap;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text);
+    max-height: calc(100vh - 320px); overflow-y: auto;
+  }
+
+  /* Renderização de markdown (ata) */
+  .markdown-body { font-size: 14px; line-height: 1.7; color: var(--text); max-height: calc(100vh - 320px); overflow-y: auto; padding-right: 6px; }
+  .markdown-body h1 { font-size: 22px; font-weight: 750; letter-spacing: -.02em; margin: 4px 0 14px; }
+  .markdown-body h2 { font-size: 17px; font-weight: 700; margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .markdown-body h3 { font-size: 15px; font-weight: 650; margin: 18px 0 8px; }
+  .markdown-body p { margin: 0 0 12px; }
+  .markdown-body ul, .markdown-body ol { margin: 0 0 14px; padding-left: 22px; }
+  .markdown-body li { margin: 4px 0; }
+  .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .markdown-body strong { font-weight: 700; color: #fff; }
+  .markdown-body em { font-style: italic; color: var(--muted); }
+  .markdown-body code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .markdown-body blockquote { margin: 0 0 12px; padding: 8px 14px; border-left: 3px solid var(--accent); background: var(--card-2); border-radius: 0 8px 8px 0; color: var(--muted); }
+  .markdown-body a { color: var(--accent-2); text-decoration: none; }
+  .markdown-body table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 13px; }
+  .markdown-body th, .markdown-body td { border: 1px solid var(--border-strong); padding: 8px 12px; text-align: left; }
+  .markdown-body th { background: var(--card-2); font-weight: 650; }
+
+  /* ---------- Player de áudio ---------- */
+  .players { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 16px; }
+  .players-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+  .player {
+    display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 12px;
+  }
+  .pl-play {
+    flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; padding: 0;
+    background: var(--grad-brand); color: #fff; font-size: 15px; display: grid; place-items: center;
+    border: none; box-shadow: 0 6px 16px -8px var(--violet);
+  }
+  .pl-play:hover:not(:disabled) { filter: brightness(1.08); }
+  .pl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .pl-name { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .pl-name .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.09); cursor: pointer; position: relative; }
+  .pl-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--grad); pointer-events: none; }
+  .pl-bar:hover .pl-fill { filter: brightness(1.12); }
+  .pl-time { flex-shrink: 0; font-size: 11.5px; color: var(--muted); font-weight: 550; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+  .pl-rate { flex-shrink: 0; background: rgba(255,255,255,.08); border: none; color: var(--muted); font-size: 11px; font-weight: 650; padding: 5px 8px; border-radius: 7px; }
+  .pl-rate:hover { color: var(--text); background: rgba(255,255,255,.14); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+    background: rgba(0,0,0,.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    animation: fade .14s ease;
+  }
+  .modal {
+    background: var(--card); border: 1px solid var(--border-strong); border-radius: 16px;
+    padding: 24px; width: min(420px, calc(100vw - 40px)); box-shadow: var(--shadow);
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+  .modal p { margin: 0 0 20px; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
   /* ---------- Responsivo ---------- */
   @media (max-width: 900px) {
     .grid { grid-template-columns: 1fr; }
@@ -219,7 +338,8 @@
     </div>
     <div class="navlabel">Menu</div>
     <nav>
-      <button class="navitem active" data-view="config"><span class="ic">⚙️</span><span class="lbl">Configuração</span></button>
+      <button class="navitem active" data-view="meetings"><span class="ic">📁</span><span class="lbl">Reuniões</span></button>
+      <button class="navitem" data-view="config"><span class="ic">⚙️</span><span class="lbl">Configuração</span></button>
       <button class="navitem" data-view="test"><span class="ic">🧪</span><span class="lbl">Teste rápido</span></button>
       <button class="navitem" data-view="logs"><span class="ic">📜</span><span class="lbl">Log</span></button>
     </nav>
@@ -239,12 +359,51 @@
 
     <div class="content">
       <div class="page-head">
-        <h1 id="viewTitle">Configuração</h1>
-        <p id="viewDesc">Conecte o Discord, escolha o idioma, o modelo e o provedor da ata.</p>
+        <h1 id="viewTitle">Reuniões</h1>
+        <p id="viewDesc">Suas reuniões gravadas — abra para ver a ata e a transcrição.</p>
       </div>
 
+      <!-- ===================== REUNIÕES (DASHBOARD) ===================== -->
+      <section class="view" data-view="meetings">
+        <!-- Lista -->
+        <div id="meetingsList">
+          <div class="mt-toolbar">
+            <button class="btn-ghost btn-tiny" id="refreshMeetings" type="button">🔄 Atualizar</button>
+            <span class="count" id="meetingsCount"></span>
+          </div>
+          <div id="meetingsGrid" class="mt-grid"></div>
+          <div id="meetingsEmpty" class="mt-empty hidden">
+            <div class="mt-empty-ic">📭</div>
+            <h3>Nenhuma reunião ainda</h3>
+            <p>Configure o bot e use <code>/gravar</code> no seu canal de voz do Discord para gravar a primeira reunião. Ela aparece aqui automaticamente.</p>
+            <button class="btn-primary" id="goConfig" type="button">Ir para Configuração</button>
+          </div>
+        </div>
+        <!-- Detalhe -->
+        <div id="meetingDetail" class="hidden">
+          <button class="btn-ghost btn-tiny" id="backToList" type="button">← Voltar</button>
+          <div class="mt-detail-head">
+            <h2 id="mdSubject"></h2>
+            <div class="mt-meta" id="mdMeta"></div>
+            <div class="mt-actions">
+              <button class="btn-ghost btn-tiny" id="openFolder" type="button">📂 Abrir pasta</button>
+              <button class="btn-danger btn-tiny" id="deleteMeeting" type="button">🗑 Apagar</button>
+            </div>
+          </div>
+          <div class="mt-tabs">
+            <button class="mt-tab active" data-tab="ata" type="button">📄 Ata</button>
+            <button class="mt-tab" data-tab="transcript" type="button">🗣️ Transcrição</button>
+          </div>
+          <div id="tabAta" class="mt-tabpane markdown-body"></div>
+          <div id="tabTranscript" class="mt-tabpane hidden">
+            <div id="audioPlayers"></div>
+            <pre id="transcriptText" class="transcript"></pre>
+          </div>
+        </div>
+      </section>
+
       <!-- ===================== CONFIG ===================== -->
-      <section class="view" data-view="config">
+      <section class="view hidden" data-view="config">
         <div class="grid">
           <div class="card">
             <div class="card-head">
@@ -435,12 +594,25 @@
   </main>
 </div>
 
+<!-- Modal de confirmação genérico -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modalTitle">Confirmar</h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalCancel" type="button">Cancelar</button>
+      <button class="btn-danger" id="modalConfirm" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const $ = (s) => document.querySelector(s);
   const provSel = $("#provider");
 
   // ---- Views / navegação ----
   const VIEW_META = {
+    meetings: ["Reuniões", "Suas reuniões gravadas — abra para ver a ata e a transcrição."],
     config: ["Configuração", "Conecte o Discord, escolha o idioma, o modelo e o provedor da ata."],
     test: ["Teste rápido", "Valide gravação → transcrição → ata sem precisar do Discord."],
     logs: ["Log", "Atividade do bot e do processamento em tempo real."],
@@ -451,6 +623,7 @@
     $("#viewTitle").textContent = VIEW_META[v][0];
     $("#viewDesc").textContent = VIEW_META[v][1];
     $("#saveBtn").classList.toggle("hidden", v !== "config");
+    if (v === "meetings") { showMeetingList(); loadMeetings(); }
   }
   document.querySelectorAll(".navitem").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
 
@@ -784,6 +957,289 @@
     }
   });
 
+  // ==================== Reuniões (dashboard) ====================
+  let meetingsPollTimer = null;
+  let currentMeetingId = null;
+
+  function fmtDateTime(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString([], { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  function fmtDuration(a, b) {
+    if (!a || !b) return "";
+    const s = (new Date(b).getTime() - new Date(a).getTime()) / 1000;
+    if (isNaN(s) || s < 0) return "";
+    const m = Math.floor(s / 60), sec = Math.round(s % 60);
+    return m ? `${m}min ${sec}s` : `${sec}s`;
+  }
+
+  const STATUS_LABEL = { done: "Pronta", processing: "Processando", recording: "Gravando", error: "Erro" };
+  const PROC_STEPS = [["transcribe", "Transcrevendo"], ["generate", "Gerando a ata"]];
+
+  function stageStepperHtml(stage) {
+    const order = ["transcribe", "generate"];
+    const activeIdx = stage === "recording" ? -1 : order.indexOf(stage);
+    let html = '<div class="mt-mini-steps"><span class="ms done">✅ Áudio salvo</span>';
+    PROC_STEPS.forEach(([, label], i) => {
+      let cls = "pending", ic = "▫️";
+      if (activeIdx > i) { cls = "done"; ic = "✅"; }
+      else if (activeIdx === i) { cls = "active"; ic = '<span class="spin"></span>'; }
+      html += `<span class="ms ${cls}">${ic} ${label}</span>`;
+    });
+    return html + "</div>";
+  }
+
+  function meetingCardHtml(m) {
+    const processing = m.status === "processing" || m.status === "recording";
+    const who = (m.participants && m.participants.length)
+      ? m.participants.map(p => p.replace(/_/g, " ")).join(", ") : "—";
+    const foot = processing
+      ? stageStepperHtml(m.stage)
+      : `<div class="mt-card-foot">
+           <span class="mt-parts"><span>👥</span><span class="who">${escapeHtml(who)}</span></span>
+           <span class="st ${m.status}">${STATUS_LABEL[m.status] || m.status}</span>
+         </div>`;
+    return `<button class="mt-card" data-id="${m.id}">
+      <div class="mt-card-top">
+        <span class="mt-card-subject">${escapeHtml(m.subject)}</span>
+        ${processing ? `<span class="st ${m.status}">${STATUS_LABEL[m.status] || m.status}</span>` : ""}
+      </div>
+      <div class="mt-card-date">🗓️ ${fmtDateTime(m.started_at)}</div>
+      ${foot}
+    </button>`;
+  }
+
+  function isMeetingsVisible() {
+    const sec = document.querySelector('.view[data-view="meetings"]');
+    return sec && !sec.classList.contains("hidden");
+  }
+  function startMeetingsPoll() {
+    if (meetingsPollTimer) return;
+    meetingsPollTimer = setInterval(() => { if (!currentMeetingId && isMeetingsVisible()) loadMeetings(); }, 2000);
+  }
+  function stopMeetingsPoll() { if (meetingsPollTimer) { clearInterval(meetingsPollTimer); meetingsPollTimer = null; } }
+
+  function showMeetingList() {
+    currentMeetingId = null;
+    stopAllPlayers();
+    $("#meetingDetail").classList.add("hidden");
+    $("#meetingsList").classList.remove("hidden");
+  }
+  function stopAllPlayers() {
+    document.querySelectorAll("#audioPlayers audio").forEach(a => { try { a.pause(); } catch (e) { } });
+  }
+
+  async function loadMeetings() {
+    let list = [];
+    try { list = await window.pywebview.api.list_recordings(); } catch (e) { list = []; }
+    const grid = $("#meetingsGrid"), empty = $("#meetingsEmpty");
+    $("#meetingsCount").textContent = list.length ? `${list.length} reunião(ões)` : "";
+    if (!list.length) { grid.innerHTML = ""; empty.classList.remove("hidden"); stopMeetingsPoll(); return; }
+    empty.classList.add("hidden");
+    grid.innerHTML = list.map(meetingCardHtml).join("");
+    grid.querySelectorAll(".mt-card").forEach(c => c.addEventListener("click", () => openMeeting(c.dataset.id)));
+    const anyProcessing = list.some(m => m.status === "processing" || m.status === "recording");
+    if (anyProcessing && isMeetingsVisible() && !currentMeetingId) startMeetingsPoll();
+    else stopMeetingsPoll();
+  }
+
+  async function openMeeting(id) {
+    stopMeetingsPoll();
+    stopAllPlayers();
+    currentMeetingId = id;
+    let m;
+    try { m = await window.pywebview.api.get_recording(id); } catch (e) { m = { error: String(e) }; }
+    if (m.error) { toast(m.error); showMeetingList(); return; }
+    $("#meetingsList").classList.add("hidden");
+    $("#meetingDetail").classList.remove("hidden");
+    $("#mdSubject").textContent = m.subject;
+    const dur = fmtDuration(m.started_at, m.ended_at);
+    const who = (m.participants || []).map(p => p.replace(/_/g, " ")).join(", ") || "—";
+    $("#mdMeta").innerHTML = [
+      `<span>🗓️ ${fmtDateTime(m.started_at)}</span>`,
+      dur ? `<span>⏱️ ${dur}</span>` : "",
+      `<span>👥 ${escapeHtml(who)}</span>`,
+      `<span class="st ${m.status}">${STATUS_LABEL[m.status] || m.status}</span>`,
+    ].filter(Boolean).join("");
+    $("#tabAta").innerHTML = m.minutes ? renderMarkdown(m.minutes)
+      : '<p style="color:var(--muted)">Ata ainda não gerada para esta reunião.</p>';
+    $("#transcriptText").textContent = m.transcript || "(sem transcrição)";
+    buildPlayers(m.audio_files);
+    switchTab("ata");
+  }
+
+  // ---- Player de áudio ----
+  const RATES = [1, 1.25, 1.5, 2];
+  function fmtClock(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  }
+  function buildPlayers(audioFiles) {
+    const box = $("#audioPlayers");
+    box.innerHTML = "";
+    const files = (audioFiles || []).filter(f => f.url);
+    if (!files.length) return;
+    const wrap = document.createElement("div");
+    wrap.className = "players";
+    const lbl = document.createElement("div");
+    lbl.className = "players-label";
+    lbl.textContent = files.length > 1 ? "🎧 Áudio por participante" : "🎧 Áudio da reunião";
+    wrap.appendChild(lbl);
+    files.forEach(f => wrap.appendChild(makePlayer(f)));
+    box.appendChild(wrap);
+  }
+  function makePlayer(f) {
+    const el = document.createElement("div");
+    el.className = "player";
+    el.innerHTML = `
+      <button class="pl-play" type="button" aria-label="Tocar">▶</button>
+      <div class="pl-main">
+        <div class="pl-name">🗣️ <span class="who">${escapeHtml(f.speaker || f.name)}</span></div>
+        <div class="pl-bar"><div class="pl-fill"></div></div>
+      </div>
+      <div class="pl-time">0:00 / 0:00</div>
+      <button class="pl-rate" type="button">1×</button>
+      <audio preload="metadata" src="${f.url}"></audio>`;
+    const audio = el.querySelector("audio");
+    const play = el.querySelector(".pl-play");
+    const fill = el.querySelector(".pl-fill");
+    const bar = el.querySelector(".pl-bar");
+    const time = el.querySelector(".pl-time");
+    const rate = el.querySelector(".pl-rate");
+    let rateIdx = 0;
+    const upd = () => {
+      const cur = audio.currentTime || 0, dur = audio.duration || 0;
+      fill.style.width = dur ? (cur / dur * 100) + "%" : "0%";
+      time.textContent = `${fmtClock(cur)} / ${fmtClock(dur)}`;
+    };
+    play.addEventListener("click", () => {
+      if (audio.paused) {
+        document.querySelectorAll("#audioPlayers audio").forEach(a => { if (a !== audio) a.pause(); });
+        audio.play().catch(() => { });
+      } else audio.pause();
+    });
+    audio.addEventListener("play", () => { play.textContent = "❚❚"; });
+    audio.addEventListener("pause", () => { play.textContent = "▶"; });
+    audio.addEventListener("ended", () => { play.textContent = "▶"; });
+    audio.addEventListener("timeupdate", upd);
+    audio.addEventListener("loadedmetadata", upd);
+    audio.addEventListener("error", () => { play.disabled = true; time.textContent = "indisponível"; });
+    bar.addEventListener("click", (e) => {
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      if (audio.duration) audio.currentTime = ratio * audio.duration;
+    });
+    rate.addEventListener("click", () => {
+      rateIdx = (rateIdx + 1) % RATES.length;
+      audio.playbackRate = RATES[rateIdx];
+      rate.textContent = RATES[rateIdx] + "×";
+    });
+    return el;
+  }
+
+  // ---- Modal de confirmação (Promise<boolean>) ----
+  function confirmModal(title, body, confirmLabel) {
+    return new Promise((resolve) => {
+      $("#modalTitle").textContent = title;
+      $("#modalBody").textContent = body;
+      $("#modalConfirm").textContent = confirmLabel || "Confirmar";
+      const modal = $("#modal");
+      modal.classList.remove("hidden");
+      const cleanup = () => {
+        modal.classList.add("hidden");
+        $("#modalConfirm").removeEventListener("click", onOk);
+        $("#modalCancel").removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onOverlay);
+        document.removeEventListener("keydown", onKey);
+      };
+      const onOk = () => { cleanup(); resolve(true); };
+      const onCancel = () => { cleanup(); resolve(false); };
+      const onOverlay = (e) => { if (e.target === modal) onCancel(); };
+      const onKey = (e) => { if (e.key === "Escape") onCancel(); else if (e.key === "Enter") onOk(); };
+      $("#modalConfirm").addEventListener("click", onOk);
+      $("#modalCancel").addEventListener("click", onCancel);
+      modal.addEventListener("click", onOverlay);
+      document.addEventListener("keydown", onKey);
+    });
+  }
+
+  function switchTab(t) {
+    document.querySelectorAll(".mt-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+    $("#tabAta").classList.toggle("hidden", t !== "ata");
+    $("#tabTranscript").classList.toggle("hidden", t !== "transcript");
+  }
+  document.querySelectorAll(".mt-tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  $("#backToList").addEventListener("click", () => { showMeetingList(); loadMeetings(); });
+  $("#refreshMeetings").addEventListener("click", loadMeetings);
+  $("#goConfig").addEventListener("click", () => switchView("config"));
+  $("#openFolder").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const r = await window.pywebview.api.open_meeting_folder(currentMeetingId);
+    if (r.error) toast(r.error);
+  });
+
+  $("#deleteMeeting").addEventListener("click", async () => {
+    if (!currentMeetingId) return;
+    const ok = await confirmModal(
+      "Apagar reunião?",
+      "A pasta com o áudio, a transcrição e a ata será removida permanentemente. Esta ação não pode ser desfeita.",
+      "Apagar"
+    );
+    if (!ok) return;
+    const r = await window.pywebview.api.delete_recording(currentMeetingId);
+    toast(r.ok ? "Reunião apagada." : "Não foi possível apagar.");
+    showMeetingList(); loadMeetings();
+  });
+
+  // ---- Mini renderizador de Markdown (renderiza a ata) ----
+  function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function inlineMd(s) {
+    s = escapeHtml(s);
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    return s;
+  }
+  function renderMarkdown(md) {
+    const lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
+    const out = []; let i = 0;
+    const isBlockStart = (t) => /^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|-{3,}$|\*{3,}$|\|)/.test(t);
+    const splitRow = (r) => { const c = r.trim().split("|"); if (c[0] === "") c.shift(); if (c[c.length - 1] === "") c.pop(); return c.map(x => x.trim()); };
+    while (i < lines.length) {
+      const t = lines[i].trim();
+      if (!t) { i++; continue; }
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) { out.push("<hr>"); i++; continue; }
+      const h = t.match(/^(#{1,6})\s+(.*)$/);
+      if (h) { out.push(`<h${h[1].length}>${inlineMd(h[2])}</h${h[1].length}>`); i++; continue; }
+      if (t.startsWith(">")) {
+        const buf = []; while (i < lines.length && lines[i].trim().startsWith(">")) { buf.push(lines[i].trim().replace(/^>\s?/, "")); i++; }
+        out.push(`<blockquote>${inlineMd(buf.join(" "))}</blockquote>`); continue;
+      }
+      if (t.includes("|") && i + 1 < lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])) {
+        const header = splitRow(t); i += 2; const rows = [];
+        while (i < lines.length && lines[i].includes("|") && lines[i].trim()) { rows.push(splitRow(lines[i])); i++; }
+        let tb = "<table><thead><tr>" + header.map(c => `<th>${inlineMd(c)}</th>`).join("") + "</tr></thead><tbody>";
+        rows.forEach(r => { tb += "<tr>" + r.map(c => `<td>${inlineMd(c)}</td>`).join("") + "</tr>"; });
+        out.push(tb + "</tbody></table>"); continue;
+      }
+      if (/^[-*+]\s+/.test(t)) {
+        const items = []; while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) { items.push(lines[i].trim().replace(/^[-*+]\s+/, "")); i++; }
+        out.push("<ul>" + items.map(it => `<li>${inlineMd(it)}</li>`).join("") + "</ul>"); continue;
+      }
+      if (/^\d+[.)]\s+/.test(t)) {
+        const items = []; while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) { items.push(lines[i].trim().replace(/^\d+[.)]\s+/, "")); i++; }
+        out.push("<ol>" + items.map(it => `<li>${inlineMd(it)}</li>`).join("") + "</ol>"); continue;
+      }
+      const buf = []; while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i].trim())) { buf.push(lines[i].trim()); i++; }
+      out.push(`<p>${inlineMd(buf.join(" "))}</p>`);
+    }
+    return out.join("\n");
+  }
+
   async function refresh() {
     try { const st = await window.pywebview.api.status(); setStatus(st.running); }
     catch (e) { }
@@ -796,6 +1252,7 @@
     await loadSettings();
     await refresh();
     setInterval(refresh, 2500);
+    switchView("meetings");  // abre no dashboard de reuniões
     appendLog("Interface pronta. Configure e clique em Iniciar bot.");
   });
 </script>

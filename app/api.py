@@ -7,11 +7,52 @@ from __future__ import annotations
 
 import json
 import threading
+from pathlib import Path
 
 import webview
 
 from app.botrunner import BotRunner
+from core import storage
 from core.config import PROVIDERS, Config, read_raw, save_raw
+
+
+def _short_subject(text: str, limit: int = 90) -> str:
+    """Primeira frase de `text`, limpa de markdown e truncada — vira o 'assunto'."""
+    text = text.replace("*", "").replace("#", "").strip()
+    for sep in (". ", "! ", "? "):
+        if sep in text:
+            text = text.split(sep, 1)[0] + sep.strip()
+            break
+    if len(text) > limit:
+        text = text[:limit].rstrip() + "…"
+    return text
+
+
+def _derive_subject(minutes: str) -> str:
+    """Deduz um assunto curto a partir da ata (minutes.md)."""
+    if not minutes:
+        return ""
+    lines = minutes.splitlines()
+    # 1) Preferir a 1ª frase de conteúdo da seção "Resumo".
+    for i, line in enumerate(lines):
+        if line.strip().lower().startswith("## resumo"):
+            for nxt in lines[i + 1:]:
+                s = nxt.strip()
+                if s and not s.startswith(("#", "---", "**", "*", ">")):
+                    return _short_subject(s)
+            break
+    # 2) Senão, a 1ª linha significativa que não seja título/metadado.
+    for line in lines:
+        s = line.strip().lstrip("#").strip()
+        low = s.lower()
+        if not s or s.startswith("---"):
+            continue
+        if low.startswith("ata de reuni"):
+            continue
+        if s.startswith("**") and ":" in s:  # linhas de metadados (Data:, Horário:)
+            continue
+        return _short_subject(s)
+    return ""
 
 
 class Api:
@@ -344,3 +385,119 @@ class Api:
             "configured": cfg.is_configured(),
             "provider": cfg.minutes.provider,
         }
+
+    # ---- Reuniões gravadas (dashboard) ----
+
+    @staticmethod
+    def _read_text(path) -> str:
+        try:
+            p = Path(path)
+            return p.read_text(encoding="utf-8") if p.exists() else ""
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def list_recordings(self) -> list[dict]:
+        """Lista as reuniões para o dashboard (assunto, data, participantes, estado)."""
+        storage.init_db()
+        out = []
+        for m in storage.list_meetings(limit=200):
+            d = Path(m.dir_path)
+            minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+            participants = (
+                sorted(f.stem for f in d.glob("*.wav")) if d.exists() else []
+            )
+            transcript_ok = bool(self._read_text(m.transcript_path).strip()) or (
+                d / "transcript.txt"
+            ).exists()
+            has_minutes = bool(minutes.strip())
+            # Etapa atual (só importa enquanto processa/grava), inferida do que já
+            # existe em disco: sem transcript ainda => transcrevendo; com transcript
+            # mas sem ata => gerando a ata.
+            stage = None
+            if m.status == "recording":
+                stage = "recording"
+            elif m.status == "processing":
+                stage = "transcribe" if not transcript_ok else "generate"
+            out.append(
+                {
+                    "id": m.id,
+                    "subject": _derive_subject(minutes) or "Reunião sem ata",
+                    "started_at": m.started_at,
+                    "ended_at": m.ended_at,
+                    "status": m.status,
+                    "stage": stage,
+                    "participants": participants,
+                    "has_minutes": has_minutes,
+                    "has_transcript": transcript_ok,
+                }
+            )
+        return out
+
+    def get_recording(self, meeting_id: str) -> dict:
+        """Conteúdo completo de uma reunião: ata (markdown), transcrição e áudios."""
+        m = storage.get_meeting(meeting_id)
+        if m is None:
+            return {"error": "Reunião não encontrada."}
+        d = Path(m.dir_path)
+        minutes = self._read_text(m.minutes_path) or self._read_text(d / "minutes.md")
+        transcript = self._read_text(m.transcript_path) or self._read_text(
+            d / "transcript.txt"
+        )
+        audio = []
+        if d.exists():
+            wavs = sorted(d.glob("*.wav"))
+            base_url = ""
+            if wavs:
+                try:
+                    from app.audioserver import ensure_server
+
+                    base_url = f"http://127.0.0.1:{ensure_server()}/audio/{m.id}"
+                except Exception:  # noqa: BLE001 — sem player, mas o resto funciona
+                    base_url = ""
+            for f in wavs:
+                audio.append(
+                    {
+                        "name": f.name,
+                        "speaker": f.stem.replace("_", " "),
+                        "size": f.stat().st_size,
+                        "url": f"{base_url}/{f.name}" if base_url else "",
+                    }
+                )
+        return {
+            "id": m.id,
+            "subject": _derive_subject(minutes) or "Reunião sem ata",
+            "started_at": m.started_at,
+            "ended_at": m.ended_at,
+            "status": m.status,
+            "participants": sorted(a["name"].rsplit(".", 1)[0] for a in audio),
+            "minutes": minutes,
+            "transcript": transcript,
+            "audio_files": audio,
+            "dir": str(d),
+        }
+
+    def open_meeting_folder(self, meeting_id: str) -> dict:
+        """Abre a pasta da reunião no gerenciador de arquivos do sistema."""
+        import os
+        import subprocess
+        import sys
+
+        m = storage.get_meeting(meeting_id)
+        if m is None or not Path(m.dir_path).exists():
+            return {"error": "Pasta não encontrada."}
+        path = m.dir_path
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            elif sys.platform == "win32":
+                os.startfile(path)  # type: ignore[attr-defined]  # noqa
+            else:
+                subprocess.Popen(["xdg-open", path])
+            return {"ok": True}
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
+
+    def delete_recording(self, meeting_id: str) -> dict:
+        """Apaga a reunião (índice + pasta em disco)."""
+        ok = storage.delete_meeting(meeting_id)
+        return {"ok": ok}
