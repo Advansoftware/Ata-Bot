@@ -448,10 +448,18 @@ class Api:
             # existe em disco: sem transcript ainda => transcrevendo; com transcript
             # mas sem ata => gerando a ata.
             stage = None
+            progress = None
             if m.status == "recording":
                 stage = "recording"
             elif m.status == "processing":
                 stage = "transcribe" if not transcript_ok else "generate"
+                if stage == "transcribe":  # lê o % da transcrição, se houver
+                    raw = self._read_text(d / "progress.json")
+                    if raw:
+                        try:
+                            progress = float(json.loads(raw).get("frac"))
+                        except Exception:  # noqa: BLE001
+                            progress = None
             out.append(
                 {
                     "id": m.id,
@@ -460,6 +468,7 @@ class Api:
                     "ended_at": m.ended_at,
                     "status": m.status,
                     "stage": stage,
+                    "progress": progress,
                     "participants": participants,
                     "has_minutes": has_minutes,
                     "has_transcript": transcript_ok,

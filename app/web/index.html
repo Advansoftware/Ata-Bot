@@ -235,6 +235,8 @@
   .ms.active { color: var(--text); }
   .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); display: inline-block; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .mt-prog { height: 5px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 8px; }
+  .mt-prog-fill { height: 100%; background: var(--grad); border-radius: 999px; transition: width .3s ease; }
 
   .mt-empty { text-align: center; padding: 70px 20px; color: var(--muted); }
   .mt-empty-ic { font-size: 46px; margin-bottom: 8px; }
@@ -1192,17 +1194,23 @@
   const STATUS_LABEL = { done: "Pronta", processing: "Processando", recording: "Gravando", error: "Erro" };
   const PROC_STEPS = [["transcribe", "Transcrevendo"], ["generate", "Gerando a ata"]];
 
-  function stageStepperHtml(stage) {
+  function stageStepperHtml(stage, progress) {
     const order = ["transcribe", "generate"];
     const activeIdx = stage === "recording" ? -1 : order.indexOf(stage);
+    const pct = (progress != null) ? Math.round(progress * 100) : null;
     let html = '<div class="mt-mini-steps"><span class="ms done">✅ Áudio salvo</span>';
-    PROC_STEPS.forEach(([, label], i) => {
+    PROC_STEPS.forEach(([k, label], i) => {
       let cls = "pending", ic = "▫️";
       if (activeIdx > i) { cls = "done"; ic = "✅"; }
       else if (activeIdx === i) { cls = "active"; ic = '<span class="spin"></span>'; }
-      html += `<span class="ms ${cls}">${ic} ${label}</span>`;
+      const extra = (activeIdx === i && k === "transcribe" && pct != null) ? ` ${pct}%` : "";
+      html += `<span class="ms ${cls}">${ic} ${label}${extra}</span>`;
     });
-    return html + "</div>";
+    html += "</div>";
+    if (stage === "transcribe" && pct != null) {
+      html += `<div class="mt-prog"><div class="mt-prog-fill" style="width:${pct}%"></div></div>`;
+    }
+    return html;
   }
 
   function meetingCardHtml(m) {
@@ -1210,7 +1218,7 @@
     const who = (m.participants && m.participants.length)
       ? m.participants.map(p => p.replace(/_/g, " ")).join(", ") : "—";
     const foot = processing
-      ? stageStepperHtml(m.stage)
+      ? stageStepperHtml(m.stage, m.progress)
       : `<div class="mt-card-foot">
            <span class="mt-parts"><span>👥</span><span class="who">${escapeHtml(who)}</span></span>
            <span class="st ${m.status}">${STATUS_LABEL[m.status] || m.status}</span>

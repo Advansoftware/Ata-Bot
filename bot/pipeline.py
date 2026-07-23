@@ -43,7 +43,7 @@ class Pipeline:
         minutes_path = meeting.dir / "minutes.md"
         try:
             # 1) Transcrição — salva o transcript.txt assim que fica pronto.
-            transcript = await asyncio.to_thread(self._transcribe, tracks, on_step)
+            transcript = await asyncio.to_thread(self._transcribe, meeting, tracks, on_step)
             transcript_path.write_text(transcript, encoding="utf-8")
             storage.update_meeting(meeting.id, transcript_path=str(transcript_path))
 
@@ -56,6 +56,7 @@ class Pipeline:
             storage.update_meeting(meeting.id, status="error")
             raise
 
+        (meeting.dir / "progress.json").unlink(missing_ok=True)  # limpa o progresso
         storage.update_meeting(
             meeting.id,
             status="done",
@@ -76,16 +77,40 @@ class Pipeline:
         return updated  # type: ignore[return-value]
 
     def _transcribe(
-        self, tracks: dict[str, Path], on_step: Optional[StepCB] = None
+        self,
+        meeting: storage.Meeting,
+        tracks: dict[str, Path],
+        on_step: Optional[StepCB] = None,
     ) -> str:
-        """Etapa 1: transcreve as faixas (roda em thread). Só depois da gravação."""
+        """Etapa 1: transcreve as faixas (roda em thread). Só depois da gravação.
+
+        Grava o progresso (0..1) em <reunião>/progress.json para o dashboard
+        mostrar uma barra de % — a transcrição é lenta na CPU.
+        """
+        import json
+
         step = on_step or (lambda _k, _d="": None)
+        progress_path = meeting.dir / "progress.json"
+        last_pct = {"v": -1}
 
         def _on_track(done, total, speaker):
             step("transcribe", f"{done}/{total} — {speaker}")
 
+        def _on_progress(frac: float) -> None:
+            pct = int(frac * 100)
+            if pct == last_pct["v"]:  # só grava quando o % inteiro muda
+                return
+            last_pct["v"] = pct
+            try:
+                progress_path.write_text(
+                    json.dumps({"stage": "transcribe", "frac": round(frac, 4)}),
+                    encoding="utf-8",
+                )
+            except Exception:  # noqa: BLE001
+                pass
+
         segments = self.transcriber.transcribe_meeting(
-            tracks, self.language, on_track=_on_track
+            tracks, self.language, on_track=_on_track, on_progress=_on_progress
         )
         return render_transcript(segments)
 
