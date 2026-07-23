@@ -7,8 +7,9 @@ projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
-Ao cortar uma versão, mova os itens abaixo para uma nova seção `## [X.Y.Z] - AAAA-MM-DD`
-e crie a tag correspondente (`git tag -a vX.Y.Z`).
+## [1.0.0] - 2026-07-23
+
+Primeira versão pública.
 
 ### Adicionado
 - Gravação nativa de reuniões em canais de voz do Discord (`/gravar` e `/parar`),
@@ -29,4 +30,5 @@ e crie a tag correspondente (`git tag -a vX.Y.Z`).
   na ordem correta com fallback por membro do grupo, sem o corte extra do
   resultado, e jitter buffer sem-perdas para gravação. Contorno em `bot/pcmsink.py`.
 
-[Não lançado]: https://github.com/Advansoftware/Ata-Bot/commits/main
+[Não lançado]: https://github.com/Advansoftware/Ata-Bot/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Advansoftware/Ata-Bot/releases/tag/v1.0.0
