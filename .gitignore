@@ -1,0 +1,12 @@
+.env
+config.toml
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Artefatos de empacotamento (PyInstaller)
+build/
+dist/
+*.manifest

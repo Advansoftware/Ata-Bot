@@ -1,0 +1,3 @@
+# Dependência só para EMPACOTAR o app (não é necessária para rodar em dev).
+#   pip install -r requirements-build.txt
+pyinstaller>=6.0

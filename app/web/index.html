@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ata Bot</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<style>
+  /* Tema escuro estilo app macOS premium (ref.: MindFlow): superfícies em
+     camadas, wash de gradiente roxo→azul na sidebar, azul de sistema, SF. */
+  :root {
+    color-scheme: dark;
+    --bg: #0e0e11; --sidebar: #17171a; --panel: #16161a; --card: #1e1e22; --card-2: #26262b;
+    --text: #f2f2f4; --muted: rgba(235,235,245,.55); --faint: rgba(235,235,245,.30);
+    --border: rgba(255,255,255,.07); --border-strong: rgba(255,255,255,.13);
+    --accent: #0a84ff; --accent-2: #64d2ff; --accent-soft: rgba(10,132,255,.18); --violet: #7c5cff;
+    --ok: #30d158; --off: #636366; --danger: #ff5a52; --warn: #ff9f0a;
+    --input: #26262b;
+    --shadow: 0 0 0 .5px rgba(255,255,255,.03), 0 22px 50px -26px rgba(0,0,0,.9);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --grad: linear-gradient(135deg, #0a84ff 0%, #64d2ff 100%);
+    --grad-brand: linear-gradient(135deg, #7c5cff 0%, #0a84ff 100%);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 30%, transparent); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+
+  /* ---------- App shell ---------- */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 232px; flex-shrink: 0; background: var(--sidebar);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow: hidden;
+  }
+  .sidebar::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 360px; pointer-events: none;
+    background:
+      radial-gradient(120% 62% at 0% 0%, rgba(124,92,255,.24), transparent 60%),
+      radial-gradient(95% 52% at 100% 2%, rgba(10,132,255,.15), transparent 60%);
+  }
+  .sidebar > * { position: relative; }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 8px 8px 24px; }
+  .brand .logo {
+    width: 34px; height: 34px; border-radius: 9px; display: block;
+    box-shadow: 0 6px 16px -6px var(--violet);
+  }
+  .brand .bt { font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
+  .brand .bs { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .navlabel { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 0 11px 8px; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  .navitem {
+    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    padding: 9px 11px; border-radius: 9px; border: none; background: transparent;
+    color: var(--muted); font-family: inherit; font-size: 13.5px; font-weight: 550; cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .navitem .ic { width: 18px; text-align: center; font-size: 15px; }
+  .navitem:hover { background: rgba(255,255,255,.05); color: var(--text); }
+  .navitem.active { background: rgba(255,255,255,.09); color: #fff; font-weight: 650; box-shadow: inset 0 0 0 .5px rgba(255,255,255,.06); }
+  .side-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .statuschip {
+    display: flex; align-items: center; gap: 9px; padding: 10px 11px; border-radius: 9px;
+    background: var(--card-2); border: 1px solid var(--border); font-size: 12.5px; font-weight: 600;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--off); flex-shrink: 0; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px; padding: 13px 26px;
+    background: color-mix(in srgb, var(--panel) 68%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+  }
+  .topbar .ws { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .topbar .spacer { margin-left: auto; }
+  .toast { font-size: 12.5px; color: var(--muted); }
+
+  .content { padding: 26px 26px 52px; max-width: 1200px; width: 100%; }
+  .view { animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .page-head { margin: 2px 2px 22px; }
+  .page-head h1 { font-size: 27px; margin: 0; font-weight: 800; letter-spacing: -.03em; }
+  .page-head p { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  .span2 { grid-column: 1 / -1; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px; box-shadow: var(--shadow-sm);
+  }
+  .card-head { margin-bottom: 18px; }
+  .card-head h2 { font-size: 14.5px; margin: 0; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+  .card-head p { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; font-weight: 600; letter-spacing: .01em; }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .label-row label { margin: 0; }
+  .inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .inline > select, .inline > input { flex: 1; min-width: 150px; }
+
+  input, select {
+    width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--border-strong);
+    background: var(--input); color: var(--text); font-size: 13.5px; font-family: inherit;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  select {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    color: var(--text) !important; padding-right: 36px; cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat; background-position: right 13px center;
+  }
+  select option { background: var(--card-2); color: var(--text); }
+  input::placeholder { color: var(--faint); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input:read-only { color: var(--muted); }
+
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 7px; line-height: 1.5; }
+  .hint code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; font-size: 11px; }
+  .hidden { display: none !important; }
+
+  button {
+    padding: 10px 15px; border-radius: 10px; border: 1px solid transparent;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: filter .12s, background .12s, opacity .12s, transform .04s;
+  }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .5; cursor: default; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-ghost { background: rgba(255,255,255,.08); color: var(--text); border-color: transparent; }
+  .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.14); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover:not(:disabled) { filter: brightness(.95); }
+  .btn-tiny { padding: 4px 10px; font-size: 11px; border-radius: 8px; }
+  .btn-block { width: 100%; justify-content: center; }
+
+  .chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 650; border: 1px solid var(--border-strong); color: var(--muted); white-space: nowrap; }
+  .chip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .badge { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); font-weight: 650; }
+
+  .progress { height: 8px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--border); overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; width: 0%; background: var(--grad); transition: width .18s ease; }
+
+  /* ---------- Stepper ---------- */
+  .stepper { display: flex; list-style: none; padding: 0; margin: 0; gap: 0; }
+  .step { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 9px; }
+  .step:not(:first-child)::before {
+    content: ""; position: absolute; top: 18px; left: -50%; width: 100%; height: 2px;
+    background: var(--border-strong); z-index: 0;
+  }
+  .step.done::before, .step.active::before { background: var(--accent); }
+  .node {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--card-2); border: 2px solid var(--border-strong); color: var(--muted);
+    font-weight: 700; font-size: 15px; z-index: 1; transition: all .18s;
+  }
+  .step.active .node { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+  .step.done .node { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .slabel { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .step.active .slabel, .step.done .slabel { color: var(--text); }
+  .sdetail { display: block; font-size: 11px; font-weight: 500; color: var(--muted); min-height: 14px; margin-top: 2px; }
+
+  .result {
+    background: var(--card-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin: 8px 0 0;
+    font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+    max-height: 340px; overflow-y: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  #log {
+    background: #0a0a0c; color: #d3d8e0; border-radius: 12px; padding: 16px 18px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px;
+    height: calc(100vh - 240px); min-height: 300px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;
+    border: 1px solid var(--border);
+  }
+
+  /* ---------- Responsivo ---------- */
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    .span2 { grid-column: auto; }
+  }
+  @media (max-width: 780px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 10px 14px; gap: 6px; overflow-x: auto; }
+    .sidebar::before { display: none; }
+    .brand { padding: 0 12px 0 4px; }
+    .brand .bs { display: none; }
+    .navlabel { display: none; }
+    nav { flex-direction: row; }
+    .side-bottom { margin: 0 0 0 auto; flex-direction: row; }
+    .two { grid-template-columns: 1fr; }
+    .navitem .lbl { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="logo" src="icon.svg" alt="Ata Bot" />
+      <div>
+        <div class="bt">Ata Bot</div>
+        <div class="bs">Workspace</div>
+      </div>
+    </div>
+    <div class="navlabel">Menu</div>
+    <nav>
+      <button class="navitem active" data-view="config"><span class="ic">⚙️</span><span class="lbl">Configuração</span></button>
+      <button class="navitem" data-view="test"><span class="ic">🧪</span><span class="lbl">Teste rápido</span></button>
+      <button class="navitem" data-view="logs"><span class="ic">📜</span><span class="lbl">Log</span></button>
+    </nav>
+    <div class="side-bottom">
+      <div class="statuschip"><span id="statusDot" class="dot"></span><span id="statusText">Bot parado</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <span class="ws">Ata Bot · Workspace</span>
+      <div class="spacer"></div>
+      <span class="toast" id="toast"></span>
+      <button class="btn-ghost" id="saveBtn">Salvar</button>
+      <button class="btn-primary" id="botToggle">▶ Iniciar bot</button>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <h1 id="viewTitle">Configuração</h1>
+        <p id="viewDesc">Conecte o Discord, escolha o idioma, o modelo e o provedor da ata.</p>
+      </div>
+
+      <!-- ===================== CONFIG ===================== -->
+      <section class="view" data-view="config">
+        <div class="grid">
+          <div class="card">
+            <div class="card-head">
+              <h2>💬 Discord</h2>
+              <p>O token do bot da sua aplicação no Developer Portal.</p>
+            </div>
+            <div class="field">
+              <label for="token">Token do bot</label>
+              <input id="token" type="password" placeholder="cole o token do bot" autocomplete="off" />
+              <div class="hint">Developer Portal → sua aplicação → Bot → Reset/Copy Token. Em branco = manter o atual.</div>
+            </div>
+            <div class="field">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input id="postToDiscord" type="checkbox" style="width:auto;" checked />
+                Postar a ata no canal do Discord ao terminar
+              </label>
+              <div class="hint">Desmarque para <b>testar sem enviar nada no grupo</b>: o bot só salva o arquivo e mostra a ata no Log. Vale ao (re)iniciar o bot.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>📁 Onde salvar</h2>
+              <p>Pasta de destino dos áudios, transcrições e atas.</p>
+            </div>
+            <div class="field">
+              <label>Pasta de destino</label>
+              <div class="inline">
+                <input id="outDir" placeholder="(padrão: data/meetings do projeto)" readonly />
+                <button class="btn-ghost" id="chooseDirBtn" type="button">Escolher…</button>
+                <button class="btn-ghost" id="clearDirBtn" type="button" title="Voltar ao padrão">Limpar</button>
+              </div>
+              <div class="hint">Cada reunião vira uma subpasta com áudio por participante, <code>transcript.txt</code> e <code>minutes.md</code>.</div>
+            </div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-head">
+              <h2>🤖 Geração da ata</h2>
+              <p>Quem escreve a ata a partir da transcrição. Troca vale já na próxima reunião — sem reiniciar.</p>
+            </div>
+            <div class="field">
+              <label for="provider">Provedor</label>
+              <select id="provider">
+                <option value="claude">Anthropic — Claude</option>
+                <option value="openai">OpenAI — ChatGPT</option>
+                <option value="gemini">Google — Gemini</option>
+                <option value="ollama">Ollama — local (sem chave)</option>
+              </select>
+            </div>
+
+            <div class="prov" data-prov="claude">
+              <div class="two">
+                <div>
+                  <label>Modelo</label>
+                  <select data-model="claude"></select>
+                  <input data-model-custom="claude" class="hidden" placeholder="ex: claude-..." style="margin-top:8px" />
+                </div>
+                <div><label>Chave da API (Anthropic) <span id="k-claude" class="badge hidden">configurada</span></label><input data-key="claude" type="password" placeholder="sk-ant-..." autocomplete="off" /></div>
+              </div>
+            </div>
+            <div class="prov hidden" data-prov="openai">
+              <div class="two">
+                <div>
+                  <label>Modelo</label>
+                  <select data-model="openai"></select>
+                  <input data-model-custom="openai" class="hidden" placeholder="ex: gpt-..." style="margin-top:8px" />
+                </div>
+                <div><label>Chave da API (OpenAI) <span id="k-openai" class="badge hidden">configurada</span></label><input data-key="openai" type="password" placeholder="sk-..." autocomplete="off" /></div>
+              </div>
+            </div>
+            <div class="prov hidden" data-prov="gemini">
+              <div class="two">
+                <div>
+                  <label>Modelo</label>
+                  <select data-model="gemini"></select>
+                  <input data-model-custom="gemini" class="hidden" placeholder="ex: gemini-..." style="margin-top:8px" />
+                </div>
+                <div><label>Chave da API (Gemini) <span id="k-gemini" class="badge hidden">configurada</span></label><input data-key="gemini" type="password" placeholder="AIza..." autocomplete="off" /></div>
+              </div>
+            </div>
+            <div class="prov hidden" data-prov="ollama">
+              <div class="two">
+                <div>
+                  <div class="label-row">
+                    <label>Modelo</label>
+                    <button class="btn-ghost btn-tiny" id="detectOllama" type="button">🔄 Detectar</button>
+                  </div>
+                  <select data-model="ollama"></select>
+                  <input data-model-custom="ollama" class="hidden" placeholder="ex: llama3.1:8b" style="margin-top:8px" />
+                </div>
+                <div><label>Host</label><input data-host="ollama" placeholder="http://localhost:11434" /></div>
+              </div>
+              <div class="hint">Requer o Ollama rodando (ollama.com). "Detectar" lista os modelos já baixados. Nada sai da máquina.</div>
+            </div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-head">
+              <h2>🗣️ Transcrição local (Whisper)</h2>
+              <p>Roda 100% na sua máquina. Escolha o idioma, depois o modelo, e baixe.</p>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label for="lang">1 · Idioma da reunião</label>
+                <select id="lang"></select>
+                <div class="hint">O modelo é multilíngue — um download serve para qualquer idioma.</div>
+              </div>
+              <div class="field">
+                <label for="whDevice">Processamento</label>
+                <select id="whDevice">
+                  <option value="cpu">CPU (compatível com tudo)</option>
+                  <option value="cuda">GPU NVIDIA (CUDA, mais rápido)</option>
+                </select>
+                <div class="hint">Mudou modelo/processamento? Reinicie o bot para recarregar.</div>
+              </div>
+            </div>
+            <div class="field" style="margin-top:16px;">
+              <div class="label-row">
+                <label for="whModel">2 · Modelo do Whisper</label>
+                <span id="modelChip" class="chip">—</span>
+              </div>
+              <div class="inline">
+                <select id="whModel"></select>
+                <button class="btn-primary" id="dlModel" type="button">⬇ Baixar</button>
+              </div>
+              <div id="dlBar" class="progress hidden"><div id="dlFill" class="progress-fill"></div></div>
+              <div class="hint">Baixado uma vez e salvo em <code>data/models/</code>. Maior = mais preciso e mais lento. Escolha o idioma para liberar o download.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== TEST ===================== -->
+      <section class="view hidden" data-view="test">
+        <div class="card">
+          <div class="card-head">
+            <h2>🧪 Teste rápido — sem Discord</h2>
+            <p>Grava do microfone, transcreve e gera uma mini-ata. Cada etapa acontece em sequência, na ordem abaixo.</p>
+          </div>
+
+          <ol class="stepper" id="stepper">
+            <li class="step" data-step="save"><div class="node">1</div><div class="slabel">Salvar áudio<span class="sdetail"></span></div></li>
+            <li class="step" data-step="transcribe"><div class="node">2</div><div class="slabel">Transcrever<span class="sdetail"></span></div></li>
+            <li class="step" data-step="generate"><div class="node">3</div><div class="slabel">Gerar a ata<span class="sdetail"></span></div></li>
+          </ol>
+
+          <div class="two" style="margin-top:22px; align-items:end;">
+            <div class="field" style="margin:0;">
+              <div class="label-row">
+                <label for="micDevice">Microfone</label>
+                <button class="btn-ghost btn-tiny" id="refreshMics" type="button">🔄 Atualizar</button>
+              </div>
+              <select id="micDevice"></select>
+            </div>
+            <div class="field" style="margin:0;">
+              <button class="btn-primary btn-block" id="testToggle">🎤 Iniciar gravação</button>
+            </div>
+          </div>
+          <div class="toast" id="testStatus" style="margin-top:12px; display:block;"></div>
+
+          <canvas id="mic" width="1100" height="76" class="hidden"
+            style="width:100%; height:76px; margin-top:14px; border-radius:12px; background:var(--card-2); border:1px solid var(--border);"></canvas>
+
+          <div id="testResult" class="hidden" style="margin-top:6px;">
+            <div class="two" style="align-items:start;">
+              <div>
+                <label style="margin-top:16px;">Transcrição</label>
+                <div id="testTranscript" class="result"></div>
+              </div>
+              <div>
+                <label style="margin-top:16px;">Mini-ata gerada</label>
+                <div id="testMinutes" class="result"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== LOGS ===================== -->
+      <section class="view hidden" data-view="logs">
+        <div class="card">
+          <div class="card-head"><h2>📜 Log de atividade</h2><p>O que o bot e o processamento estão fazendo, em tempo real.</p></div>
+          <div id="log"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const provSel = $("#provider");
+
+  // ---- Views / navegação ----
+  const VIEW_META = {
+    config: ["Configuração", "Conecte o Discord, escolha o idioma, o modelo e o provedor da ata."],
+    test: ["Teste rápido", "Valide gravação → transcrição → ata sem precisar do Discord."],
+    logs: ["Log", "Atividade do bot e do processamento em tempo real."],
+  };
+  function switchView(v) {
+    document.querySelectorAll(".navitem").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+    document.querySelectorAll(".view").forEach(s => s.classList.toggle("hidden", s.dataset.view !== v));
+    $("#viewTitle").textContent = VIEW_META[v][0];
+    $("#viewDesc").textContent = VIEW_META[v][1];
+    $("#saveBtn").classList.toggle("hidden", v !== "config");
+  }
+  document.querySelectorAll(".navitem").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
+
+  // ---- Idiomas ----
+  const LANGS = [
+    ["auto", "Detectar automaticamente"], ["pt", "Português"], ["en", "Inglês"],
+    ["es", "Espanhol"], ["fr", "Francês"], ["de", "Alemão"], ["it", "Italiano"],
+    ["nl", "Holandês"], ["ru", "Russo"], ["ja", "Japonês"], ["zh", "Chinês"],
+    ["ko", "Coreano"], ["ar", "Árabe"], ["hi", "Hindi"], ["pl", "Polonês"], ["tr", "Turco"],
+  ];
+  function buildLangSelect() {
+    const sel = $("#lang");
+    sel.innerHTML = '<option value="" disabled>Escolha o idioma…</option>';
+    for (const [v, label] of LANGS) {
+      const o = document.createElement("option"); o.value = v; o.textContent = label; sel.appendChild(o);
+    }
+  }
+
+  // ---- Modelos da ata ----
+  const CUSTOM = "__custom__";
+  const MODELS = {
+    claude: [["claude-opus-4-8","claude-opus-4-8 · melhor"],["claude-sonnet-5","claude-sonnet-5 · equilíbrio"],["claude-haiku-4-5","claude-haiku-4-5 · mais barato"],["claude-opus-4-7","claude-opus-4-7"]],
+    openai: [["gpt-4o-mini","gpt-4o-mini · barato"],["gpt-4o","gpt-4o"],["gpt-4.1-mini","gpt-4.1-mini"],["gpt-4.1","gpt-4.1"]],
+    gemini: [["gemini-2.0-flash","gemini-2.0-flash · barato"],["gemini-2.5-flash","gemini-2.5-flash"],["gemini-2.5-pro","gemini-2.5-pro"],["gemini-1.5-flash","gemini-1.5-flash"]],
+    ollama: [["llama3.1:8b","llama3.1:8b"]],
+  };
+  const WMODELS = [
+    ["tiny", "tiny · ~75 MB · mais rápido"],
+    ["base", "base · ~145 MB"],
+    ["small", "small · ~484 MB · recomendado"],
+    ["medium", "medium · ~1,5 GB · mais preciso"],
+    ["large-v3", "large-v3 · ~3 GB · melhor (GPU)"],
+  ];
+
+  function buildModelSelect(p, current, extra) {
+    const sel = document.querySelector(`[data-model="${p}"]`);
+    const custom = document.querySelector(`[data-model-custom="${p}"]`);
+    const list = (MODELS[p] || []).slice();
+    for (const m of (extra || [])) if (!list.some(([v]) => v === m)) list.push([m, m]);
+    const known = list.some(([v]) => v === current);
+    sel.innerHTML = "";
+    for (const [v, label] of list) {
+      const o = document.createElement("option"); o.value = v; o.textContent = label; sel.appendChild(o);
+    }
+    const oc = document.createElement("option"); oc.value = CUSTOM; oc.textContent = "✏️ Outro (digitar)…"; sel.appendChild(oc);
+    if (current && !known) { sel.value = CUSTOM; custom.value = current; }
+    else { sel.value = current || (list[0] && list[0][0]) || ""; custom.value = ""; }
+    toggleCustom(p);
+  }
+  function toggleCustom(p) {
+    const sel = document.querySelector(`[data-model="${p}"]`);
+    const custom = document.querySelector(`[data-model-custom="${p}"]`);
+    custom.classList.toggle("hidden", sel.value !== CUSTOM);
+  }
+  function effectiveModel(p) {
+    const sel = document.querySelector(`[data-model="${p}"]`);
+    if (sel.value === CUSTOM) return (document.querySelector(`[data-model-custom="${p}"]`).value || "").trim();
+    return sel.value;
+  }
+  document.querySelectorAll("[data-model]").forEach((sel) => {
+    sel.addEventListener("change", () => toggleCustom(sel.dataset.model));
+  });
+
+  window.appendLog = (line) => {
+    const el = $("#log");
+    const ts = new Date().toLocaleTimeString();
+    el.textContent += `[${ts}] ${line}\n`;
+    el.scrollTop = el.scrollHeight;
+  };
+
+  function showProvider(p) {
+    document.querySelectorAll(".prov").forEach(d => d.classList.toggle("hidden", d.dataset.prov !== p));
+  }
+  provSel.addEventListener("change", () => showProvider(provSel.value));
+
+  function toast(msg) { $("#toast").textContent = msg; setTimeout(() => { if ($("#toast").textContent === msg) $("#toast").textContent = ""; }, 4000); }
+
+  // ---- Bot (toggle) ----
+  let botRunning = false;
+  function setStatus(running) {
+    botRunning = running;
+    $("#statusDot").classList.toggle("on", running);
+    $("#statusText").textContent = running ? "Bot rodando" : "Bot parado";
+    const b = $("#botToggle");
+    b.textContent = running ? "■ Parar bot" : "▶ Iniciar bot";
+    b.classList.toggle("btn-danger", running);
+    b.classList.toggle("btn-primary", !running);
+  }
+  $("#botToggle").addEventListener("click", async () => {
+    $("#botToggle").disabled = true;
+    const r = botRunning ? await window.pywebview.api.stop_bot() : await window.pywebview.api.start_bot();
+    toast(r.message);
+    $("#botToggle").disabled = false;
+    refresh();
+  });
+
+  // ---- Whisper: idioma libera download + estado + progresso ----
+  let modelState = {};
+  let downloading = null;
+
+  function buildWhisperSelect() {
+    const sel = $("#whModel");
+    sel.innerHTML = "";
+    for (const [v, label] of WMODELS) {
+      const o = document.createElement("option"); o.value = v; o.textContent = label; sel.appendChild(o);
+    }
+  }
+  function langChosen() { return !!$("#lang").value; }
+  function updateModelUI() {
+    const m = $("#whModel").value;
+    const done = !!modelState[m];
+    const chip = $("#modelChip");
+    const btn = $("#dlModel");
+    if (!langChosen()) { chip.className = "chip warn"; chip.textContent = "Escolha o idioma"; }
+    else if (downloading === m) { chip.className = "chip"; chip.textContent = "Baixando…"; }
+    else if (done) { chip.className = "chip ok"; chip.textContent = "✓ Baixado"; }
+    else { chip.className = "chip warn"; chip.textContent = "Não baixado"; }
+    btn.disabled = !langChosen() || done || downloading !== null;
+    btn.textContent = done ? "✓ Baixado" : (downloading === m ? "Baixando…" : "⬇ Baixar");
+    $("#dlBar").classList.toggle("hidden", downloading !== m);
+  }
+  async function loadModelState() {
+    try { modelState = await window.pywebview.api.model_status(); } catch (e) { modelState = {}; }
+    updateModelUI();
+  }
+  $("#lang").addEventListener("change", updateModelUI);
+  $("#whModel").addEventListener("change", () => { $("#dlFill").style.width = "0%"; updateModelUI(); });
+  $("#dlModel").addEventListener("click", async () => {
+    const m = $("#whModel").value;
+    if (!langChosen() || modelState[m] || downloading) return;
+    const r = await window.pywebview.api.download_model(m);
+    if (r.error) { toast(r.error); return; }
+    downloading = m; $("#dlFill").style.width = "0%"; updateModelUI();
+  });
+  window.modelProgress = (name, frac, done, total) => {
+    if (downloading !== name) return;
+    const pct = Math.round((frac || 0) * 100);
+    $("#dlFill").style.width = pct + "%";
+    $("#modelChip").textContent = "Baixando… " + pct + "%";
+    $("#dlModel").textContent = "Baixando… " + pct + "%";
+  };
+  window.modelDone = (name, ok, err) => {
+    downloading = null;
+    if (ok) { modelState[name] = true; $("#dlFill").style.width = "100%"; toast("✅ Modelo baixado."); }
+    else { toast("Falha no download: " + err); }
+    updateModelUI();
+  };
+
+  // ---- Passo-a-passo (stepper) do teste ----
+  const STEP_ORDER = ["save", "transcribe", "generate"];
+  function markStep(key, state, detail) {
+    const el = document.querySelector(`#stepper .step[data-step="${key}"]`);
+    if (!el) return;
+    el.classList.remove("pending", "active", "done");
+    el.classList.add(state);
+    const n = el.querySelector(".node");
+    const idx = STEP_ORDER.indexOf(key);
+    n.textContent = state === "done" ? "✓" : String(idx + 1);
+    el.querySelector(".sdetail").textContent = state === "active" ? (detail || "") : "";
+  }
+  function resetStepper() { STEP_ORDER.forEach(k => markStep(k, "pending", "")); }
+  window.pipelineStep = (key, detail) => {
+    if (key === "done") { STEP_ORDER.forEach(k => markStep(k, "done", "")); return; }
+    const idx = STEP_ORDER.indexOf(key);
+    if (idx < 0) return;
+    STEP_ORDER.forEach((k, i) => {
+      if (i < idx) markStep(k, "done", "");
+      else if (i === idx) markStep(k, "active", detail || "");
+      else markStep(k, "pending", "");
+    });
+  };
+
+  // ---- Microfones ----
+  async function loadMics(selected) {
+    const sel = $("#micDevice");
+    let r;
+    try { r = await window.pywebview.api.list_audio_devices(); }
+    catch (e) { r = { error: String(e), devices: [] }; }
+    sel.innerHTML = "";
+    if (r.error || !r.devices || !r.devices.length) {
+      const o = document.createElement("option");
+      o.value = ""; o.textContent = r.error ? "Microfone indisponível" : "Nenhum microfone encontrado";
+      sel.appendChild(o); sel.disabled = true; return;
+    }
+    sel.disabled = false;
+    const def = document.createElement("option"); def.value = ""; def.textContent = "Padrão do sistema"; sel.appendChild(def);
+    for (const d of r.devices) {
+      const o = document.createElement("option");
+      o.value = String(d.index); o.textContent = d.name + (d.default ? " (padrão)" : ""); sel.appendChild(o);
+    }
+    if (selected !== null && selected !== undefined) sel.value = String(selected);
+  }
+  $("#refreshMics").addEventListener("click", () => {
+    const cur = $("#micDevice").value;
+    loadMics(cur === "" ? null : Number(cur));
+  });
+
+  // ---- Carregar / salvar ----
+  async function loadSettings() {
+    const s = await window.pywebview.api.get_settings();
+    $("#token").placeholder = s.discord_token_set ? "•••••••• (configurado)" : "cole o token do bot";
+    $("#postToDiscord").checked = s.post_to_discord !== false;
+    $("#lang").value = s.language || "pt";
+    $("#whModel").value = (s.transcription && s.transcription.model) || "small";
+    $("#whDevice").value = (s.transcription && s.transcription.device) || "cpu";
+    $("#outDir").value = s.output_dir || "";
+    $("#outDir").placeholder = s.output_dir ? "" : `(padrão: ${s.default_output_dir})`;
+
+    provSel.value = s.minutes.provider || "claude";
+    showProvider(provSel.value);
+    for (const p of ["claude", "openai", "gemini", "ollama"]) {
+      const prov = s.minutes[p] || {};
+      buildModelSelect(p, prov.model);
+      if (p === "ollama") {
+        const h = document.querySelector(`[data-host="ollama"]`);
+        if (h) h.value = prov.host || "http://localhost:11434";
+      } else if (prov.api_key_set) {
+        document.getElementById(`k-${p}`)?.classList.remove("hidden");
+        const ki = document.querySelector(`[data-key="${p}"]`);
+        if (ki) ki.placeholder = "•••••••• (configurada)";
+      }
+    }
+    await loadModelState();
+    await loadMics(s.mic_device);
+  }
+
+  function collect() {
+    const device = $("#whDevice").value;
+    const micVal = $("#micDevice").value;
+    const data = {
+      discord_token: $("#token").value,
+      language: $("#lang").value || "pt",
+      post_to_discord: $("#postToDiscord").checked,
+      output_dir: $("#outDir").value,
+      mic_device: micVal === "" ? null : Number(micVal),
+      transcription: { model: $("#whModel").value, device: device, compute_type: device === "cuda" ? "float16" : "int8" },
+      minutes: { provider: provSel.value },
+    };
+    for (const p of ["claude", "openai", "gemini", "ollama"]) {
+      const entry = { model: effectiveModel(p) };
+      if (p === "ollama") entry.host = (document.querySelector(`[data-host="ollama"]`)?.value || "").trim();
+      else entry.api_key = document.querySelector(`[data-key="${p}"]`)?.value || "";
+      data.minutes[p] = entry;
+    }
+    return data;
+  }
+
+  $("#detectOllama").addEventListener("click", async () => {
+    const host = document.querySelector('[data-host="ollama"]').value || "http://localhost:11434";
+    const cur = effectiveModel("ollama");
+    const models = await window.pywebview.api.list_ollama_models(host);
+    if (!models || !models.length) { toast("Nenhum modelo do Ollama encontrado (está rodando?)."); return; }
+    buildModelSelect("ollama", cur, models);
+    toast(`${models.length} modelo(s) detectado(s).`);
+  });
+
+  $("#chooseDirBtn").addEventListener("click", async () => {
+    const path = await window.pywebview.api.choose_folder();
+    if (path) { $("#outDir").value = path; $("#outDir").placeholder = ""; }
+  });
+  $("#clearDirBtn").addEventListener("click", () => { $("#outDir").value = ""; });
+
+  $("#saveBtn").addEventListener("click", async () => {
+    const res = await window.pywebview.api.save_settings(collect());
+    await loadSettings();
+    document.querySelectorAll('[data-key]').forEach(i => i.value = "");
+    $("#token").value = "";
+    toast(res.configured ? "✅ Salvo — pronto para iniciar." : "Salvo. Faltam token e/ou chave.");
+  });
+
+  // ---- Medidor de voz ----
+  let micTimer = null;
+  const micHist = [];
+  function drawMic() {
+    const c = $("#mic"), ctx = c.getContext("2d");
+    const w = c.width, h = c.height;
+    ctx.clearRect(0, 0, w, h);
+    const barW = 3, gap = 2, unit = barW + gap;
+    const maxBars = Math.floor(w / unit);
+    while (micHist.length > maxBars) micHist.shift();
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, "#7c5cff"); grad.addColorStop(1, "#64d2ff");
+    ctx.fillStyle = grad;
+    for (let i = 0; i < micHist.length; i++) {
+      const lvl = Math.min(1, micHist[i] * 2.5);
+      const bh = Math.max(2, lvl * (h - 12));
+      const x = w - (micHist.length - i) * unit;
+      ctx.fillRect(x, (h - bh) / 2, barW, bh);
+    }
+  }
+  async function pollMic() {
+    try { micHist.push(await window.pywebview.api.test_level()); drawMic(); }
+    catch (e) { }
+  }
+
+  // ---- Teste (toggle) ----
+  let testRecording = false;
+  function setTestBtn(recording) {
+    const b = $("#testToggle");
+    b.textContent = recording ? "■ Parar e gerar ata" : "🎤 Iniciar gravação";
+    b.classList.toggle("btn-danger", recording);
+    b.classList.toggle("btn-primary", !recording);
+  }
+  $("#testToggle").addEventListener("click", async () => {
+    if (!testRecording) {
+      const r = await window.pywebview.api.start_test();
+      if (r.error) { $("#testStatus").textContent = r.error; return; }
+      testRecording = true;
+      setTestBtn(true);
+      resetStepper();
+      $("#testResult").classList.add("hidden");
+      $("#testStatus").textContent = "🎤 Gravando... fale algo e clique em Parar.";
+      $("#mic").classList.remove("hidden");
+      micHist.length = 0;
+      micTimer = setInterval(pollMic, 90);
+    } else {
+      testRecording = false;
+      $("#testToggle").disabled = true;
+      if (micTimer) { clearInterval(micTimer); micTimer = null; }
+      $("#mic").classList.add("hidden");
+      $("#testStatus").textContent = "⏳ Processando...";
+      const r = await window.pywebview.api.stop_test();
+      $("#testToggle").disabled = false;
+      setTestBtn(false);
+      $("#testResult").classList.remove("hidden");
+      $("#testTranscript").textContent = r.transcript || r.warning || "(sem transcrição)";
+      $("#testMinutes").textContent = r.minutes || r.error || "(sem ata)";
+      if (r.warning) $("#testStatus").textContent = r.warning;
+      else if (r.error && !r.minutes) $("#testStatus").textContent = r.error;
+      else $("#testStatus").textContent = "✅ Concluído.";
+    }
+  });
+
+  async function refresh() {
+    try { const st = await window.pywebview.api.status(); setStatus(st.running); }
+    catch (e) { }
+  }
+
+  window.addEventListener("pywebviewready", async () => {
+    buildLangSelect();
+    buildWhisperSelect();
+    resetStepper();
+    await loadSettings();
+    await refresh();
+    setInterval(refresh, 2500);
+    appendLog("Interface pronta. Configure e clique em Iniciar bot.");
+  });
+</script>
+</body>
+</html>

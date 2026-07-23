@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ata Bot
+Comment=Grava reuniões do Discord, transcreve e gera a ata
+# Ajuste os caminhos abaixo para onde você copiou o app (ex.: /opt/ata-bot):
+Exec=/opt/ata-bot/Ata Bot
+Icon=/opt/ata-bot/icon.png
+Terminal=false
+Categories=AudioVideo;Utility;
+# Casa com GLib.set_prgname("ata-bot") no app -> o GNOME usa o ícone certo na barra.
+StartupWMClass=ata-bot

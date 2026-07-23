@@ -1,0 +1,22 @@
+# Dependências do projeto. Instale tudo de uma vez:
+#   pip install -r requirements.txt
+# (No Linux, o pywebview precisa do WebKitGTK do sistema — veja o README/setup.)
+
+# --- Interface (app desktop nativo com UI em HTML/CSS/JS) ---
+pywebview>=5.0           # janela nativa usando o webview do próprio SO
+
+# --- Núcleo ---
+# Fixado em 2.8.0: é a única versão que CONECTA no gateway de voz atual do Discord
+# (a 2.6.1 é rejeitada com erro 4006). Os sinks embutidos da 2.8.0 estão quebrados,
+# então usamos um sink próprio em bot/pcmsink.py (compatível com o receive novo).
+py-cord[voice]==2.8.0    # bot de Discord com voice receive + PyNaCl + davey (DAVE)
+# audioop foi removido do Python 3.13+; algumas libs ainda esperam encontrá-lo.
+audioop-lts>=0.2 ; python_version >= "3.13"
+faster-whisper>=1.0      # transcrição local (roda em CPU ou GPU)
+sounddevice>=0.4         # captura do microfone (botão de teste sem Discord)
+
+# --- Provedores de geração da ata (todos incluídos; escolha qual usar na interface) ---
+anthropic>=0.40          # provider = "claude" (API da Anthropic)
+openai>=1.50             # provider = "openai" (ChatGPT)
+google-genai>=0.3        # provider = "gemini"
+httpx>=0.27              # provider = "ollama" (100% local) e uso geral
