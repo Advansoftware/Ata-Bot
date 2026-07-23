@@ -366,10 +366,19 @@
   .ts-head b { color: var(--text); font-size: 16px; font-weight: 750; }
   .ts-bar { height: 8px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--border); overflow: hidden; }
   .ts-fill { height: 100%; background: var(--grad); border-radius: 999px; transition: width .3s ease; }
-  .tasks-switch { font-size: 12.5px; color: var(--muted); font-weight: 500; }
-  .task-group { margin-bottom: 16px; }
-  .task-group-head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); font-weight: 650; padding: 6px 4px 8px; }
+  .seg { display: inline-flex; background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg-btn { background: transparent; border: none; color: var(--muted); font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: 7px; cursor: pointer; transition: background .12s, color .12s; }
+  .seg-btn:hover { color: var(--text); }
+  .seg-btn.active { background: var(--accent); color: #fff; }
+  .task-group { margin-bottom: 14px; }
+  .task-group-head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); font-weight: 650; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+  .task-group-head:hover { background: rgba(255,255,255,.03); }
+  .task-group-head .tg-chev { font-size: 10px; transition: transform .15s; flex-shrink: 0; }
+  .task-group.collapsed .tg-chev { transform: rotate(-90deg); }
+  .task-group.collapsed .task-group-body { display: none; }
   .task-group-head .tg-subj { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-group-head .tg-badge { flex-shrink: 0; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--muted); font-weight: 650; }
+  .task-group-head .tg-badge.complete { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
   .task-group-head .tg-date { flex-shrink: 0; }
   .task-group-head .lnk { color: var(--accent-2); cursor: pointer; flex-shrink: 0; margin-left: auto; }
   .task-group-head .lnk:hover { text-decoration: underline; }
@@ -583,10 +592,13 @@
           </div>
           <div id="tasksStats" class="tasks-stats hidden"></div>
           <div class="mt-toolbar">
+            <div class="seg" id="taskSeg">
+              <button class="seg-btn active" data-f="all" type="button">Todas</button>
+              <button class="seg-btn" data-f="pending" type="button">Pendentes</button>
+              <button class="seg-btn" data-f="done" type="button">Concluídas</button>
+            </div>
             <div class="mt-search"><input id="taskSearch" type="search" placeholder="🔎 Filtrar tarefas…" /></div>
-            <label class="switch-row tasks-switch">
-              <span class="switch"><input id="hideDone" type="checkbox" /><span class="slider"></span></span> Ocultar concluídos
-            </label>
+            <button class="btn-ghost btn-tiny" id="collapseAll" type="button">⊟ Recolher</button>
             <button class="btn-ghost btn-tiny" id="refreshTasks" type="button">🔄 Atualizar</button>
           </div>
           <div id="tasksList"></div>
@@ -1681,6 +1693,8 @@
   // ==================== Tarefas (itens de ação) ====================
   let allTasks = [];
   let taskFilter = "";
+  let taskMode = "all";               // all | pending | done
+  const collapsedGroups = new Set();  // meeting_ids recolhidos
   async function loadTasks() {
     try { allTasks = await window.pywebview.api.list_action_items(); } catch (e) { allTasks = []; }
     renderTasks();
@@ -1697,9 +1711,17 @@
       stats.classList.add("hidden");
     }
 
+    // Progresso por reunião (calculado sobre TODAS as tarefas, ignora o filtro).
+    const mStats = {};
+    for (const t of allTasks) {
+      const s = mStats[t.meeting_id] || (mStats[t.meeting_id] = { done: 0, total: 0 });
+      s.total++; if (t.done) s.done++;
+    }
+
     const q = taskFilter.trim().toLowerCase();
     let shown = allTasks;
-    if ($("#hideDone").checked) shown = shown.filter(i => !i.done);
+    if (taskMode === "pending") shown = shown.filter(i => !i.done);
+    else if (taskMode === "done") shown = shown.filter(i => i.done);
     if (q) shown = shown.filter(i => i.text.toLowerCase().includes(q) || (i.subject || "").toLowerCase().includes(q));
 
     const box = $("#tasksList");
@@ -1710,25 +1732,31 @@
       return;
     }
 
-    // Agrupa por reunião, preservando a ordem (mais recentes primeiro).
     const groups = [], byId = {};
     for (const t of shown) {
       if (!byId[t.meeting_id]) { byId[t.meeting_id] = { id: t.meeting_id, subject: t.subject, started_at: t.started_at, items: [] }; groups.push(byId[t.meeting_id]); }
       byId[t.meeting_id].items.push(t);
     }
-    box.innerHTML = groups.map(g => `<div class="task-group">
-      <div class="task-group-head">
-        <span class="tg-subj">📁 ${escapeHtml(g.subject)}</span>
-        <span class="tg-date">🗓️ ${fmtDateTime(g.started_at)}</span>
-        <span class="lnk" data-go="${g.id}">abrir reunião ↗</span>
-      </div>
-      <div class="task-group-body">
-        ${g.items.map(t => `<div class="task-row ${t.done ? "done" : ""}" data-id="${t.id}">
-          <label class="task-cb"><input type="checkbox" ${t.done ? "checked" : ""} /><span class="box"></span></label>
-          <div class="task-text">${escapeHtml(t.text)}</div>
-        </div>`).join("")}
-      </div>
-    </div>`).join("");
+    box.innerHTML = groups.map(g => {
+      const s = mStats[g.id] || { done: 0, total: g.items.length };
+      const complete = s.total > 0 && s.done === s.total;
+      const collapsed = collapsedGroups.has(g.id);
+      return `<div class="task-group ${collapsed ? "collapsed" : ""}" data-gid="${g.id}">
+        <div class="task-group-head">
+          <span class="tg-chev">▾</span>
+          <span class="tg-subj">📁 ${escapeHtml(g.subject)}</span>
+          <span class="tg-badge ${complete ? "complete" : ""}">${s.done}/${s.total}</span>
+          <span class="tg-date">🗓️ ${fmtDateTime(g.started_at)}</span>
+          <span class="lnk" data-go="${g.id}">abrir reunião ↗</span>
+        </div>
+        <div class="task-group-body">
+          ${g.items.map(t => `<div class="task-row ${t.done ? "done" : ""}" data-id="${t.id}">
+            <label class="task-cb"><input type="checkbox" ${t.done ? "checked" : ""} /><span class="box"></span></label>
+            <div class="task-text">${escapeHtml(t.text)}</div>
+          </div>`).join("")}
+        </div>
+      </div>`;
+    }).join("");
 
     box.querySelectorAll(".task-cb input").forEach(cb => cb.addEventListener("change", async () => {
       const id = cb.closest(".task-row").dataset.id;
@@ -1736,11 +1764,29 @@
       const it = allTasks.find(x => x.id === id); if (it) it.done = cb.checked;
       renderTasks();
     }));
-    box.querySelectorAll(".lnk[data-go]").forEach(el => el.addEventListener("click", () => { switchView("meetings"); openMeeting(el.dataset.go); }));
+    box.querySelectorAll(".task-group-head").forEach(head => head.addEventListener("click", e => {
+      if (e.target.closest(".lnk")) return;
+      const gid = head.closest(".task-group").dataset.gid;
+      if (collapsedGroups.has(gid)) collapsedGroups.delete(gid); else collapsedGroups.add(gid);
+      head.closest(".task-group").classList.toggle("collapsed");
+    }));
+    box.querySelectorAll(".lnk[data-go]").forEach(el => el.addEventListener("click", e => { e.stopPropagation(); switchView("meetings"); openMeeting(el.dataset.go); }));
   }
   $("#refreshTasks").addEventListener("click", loadTasks);
-  $("#hideDone").addEventListener("change", renderTasks);
   $("#taskSearch").addEventListener("input", e => { taskFilter = e.target.value; renderTasks(); });
+  $("#taskSeg").querySelectorAll(".seg-btn").forEach(b => b.addEventListener("click", () => {
+    taskMode = b.dataset.f;
+    $("#taskSeg").querySelectorAll(".seg-btn").forEach(x => x.classList.toggle("active", x === b));
+    renderTasks();
+  }));
+  $("#collapseAll").addEventListener("click", () => {
+    const ids = new Set(allTasks.map(t => t.meeting_id));
+    const allCollapsed = [...ids].every(id => collapsedGroups.has(id));
+    if (allCollapsed) collapsedGroups.clear();
+    else ids.forEach(id => collapsedGroups.add(id));
+    $("#collapseAll").textContent = allCollapsed ? "⊟ Recolher" : "⊞ Expandir";
+    renderTasks();
+  });
 
   // ==================== Compartilhar a ata ====================
   $("#copyMinutes").addEventListener("click", async () => {
