@@ -10,7 +10,7 @@ if %errorlevel%==0 (
   if %errorlevel%==0 (
     set "PY=python"
   ) else (
-    echo [ERRO] Python nao encontrado. Instale o Python 3.12 de python.org
+    echo [ERRO] Python nao encontrado. Instale o Python 3.11-3.14 de python.org
     echo         e marque "Add Python to PATH" na instalacao.
     pause
     exit /b 1

@@ -3,13 +3,14 @@
 set -e
 cd "$(dirname "$0")"
 
-# Escolhe um Python (prefere 3.12, que tem wheels de todas as deps).
+# Escolhe um Python. Da 3.11 à 3.14 todas as deps têm wheels prontos
+# (o 3.14 foi testado: py-cord voice/DAVE, onnxruntime, ctranslate2 etc. rodam).
 PY=""
-for c in python3.12 python3.11 python3; do
+for c in python3.14 python3.13 python3.12 python3.11 python3; do
   if command -v "$c" >/dev/null 2>&1; then PY="$c"; break; fi
 done
 if [ -z "$PY" ]; then
-  echo "❌ Python não encontrado. Instale o Python 3.11 ou 3.12."
+  echo "❌ Python não encontrado. Instale o Python 3.11–3.14."
   exit 1
 fi
 echo "▶ Usando $($PY --version)"

@@ -1,7 +1,7 @@
 # 🎙️ Ata Bot — reuniões do Discord
 
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%20%E2%80%93%203.14-blue.svg)](https://www.python.org/)
 [![Plataformas](https://img.shields.io/badge/SO-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#instala%C3%A7%C3%A3o)
 [![PRs bem-vindos](https://img.shields.io/badge/PRs-bem--vindos-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -60,8 +60,8 @@ Além disso, o app tem:
 
 ## Instalação
 
-Recomendado: **Python 3.11 ou 3.12** (o 3.14 é muito novo e algumas libs ainda não
-têm pacote pronto).
+Suportado: **Python 3.11 a 3.14** (todas as dependências têm pacote pronto para
+essas versões; o 3.14 foi testado).
 
 Primeiro, clone o repositório:
 ```bash
