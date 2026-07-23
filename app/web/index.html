@@ -127,6 +127,16 @@
   input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input:read-only { color: var(--muted); }
 
+  /* Switch estilo MUI (toggle deslizante) */
+  .switch-row { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; color: var(--text); font-weight: 600; margin: 0; }
+  .switch { position: relative; display: inline-flex; flex-shrink: 0; width: 42px; height: 24px; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+  .switch .slider { position: absolute; inset: 0; background: var(--off); border-radius: 999px; transition: background .2s ease; }
+  .switch .slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(18px); }
+  .switch input:focus-visible + .slider { box-shadow: 0 0 0 3px var(--accent-soft); }
+
   .hint { font-size: 11.5px; color: var(--muted); margin-top: 7px; line-height: 1.5; }
   .hint code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; font-size: 11px; }
   .hidden { display: none !important; }
@@ -581,11 +591,11 @@
               <div class="hint">Developer Portal → sua aplicação → Bot → Reset/Copy Token. Em branco = manter o atual.</div>
             </div>
             <div class="field">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input id="postToDiscord" type="checkbox" style="width:auto;" checked />
+              <label class="switch-row">
+                <span class="switch"><input id="postToDiscord" type="checkbox" checked /><span class="slider"></span></span>
                 Postar a ata no canal do Discord ao terminar
               </label>
-              <div class="hint">Desmarque para <b>testar sem enviar nada no grupo</b>: o bot só salva o arquivo e mostra a ata no Log. Vale ao (re)iniciar o bot.</div>
+              <div class="hint">Desligue para <b>não enviar nada no grupo</b>: o bot só salva o arquivo e mostra a ata no Log. Vale ao (re)iniciar o bot.</div>
             </div>
           </div>
 
