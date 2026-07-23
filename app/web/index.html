@@ -361,15 +361,30 @@
   @keyframes blink { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
 
   /* ---------- Tarefas ---------- */
+  .tasks-stats { margin-bottom: 18px; }
+  .ts-head { font-size: 13px; color: var(--muted); margin-bottom: 9px; }
+  .ts-head b { color: var(--text); font-size: 16px; font-weight: 750; }
+  .ts-bar { height: 8px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--border); overflow: hidden; }
+  .ts-fill { height: 100%; background: var(--grad); border-radius: 999px; transition: width .3s ease; }
+  .tasks-switch { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .task-group { margin-bottom: 16px; }
+  .task-group-head { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); font-weight: 650; padding: 6px 4px 8px; }
+  .task-group-head .tg-subj { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-group-head .tg-date { flex-shrink: 0; }
+  .task-group-head .lnk { color: var(--accent-2); cursor: pointer; flex-shrink: 0; margin-left: auto; }
+  .task-group-head .lnk:hover { text-decoration: underline; }
+  .task-group-body { background: var(--card-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .task-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
   .task-row:last-child { border-bottom: none; }
-  .task-check { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; cursor: pointer; accent-color: var(--accent); }
-  .task-main { flex: 1; min-width: 0; }
-  .task-text { font-size: 13.5px; line-height: 1.5; }
+  .task-row:hover { background: rgba(255,255,255,.03); }
+  .task-cb { position: relative; flex-shrink: 0; width: 22px; height: 22px; }
+  .task-cb input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  .task-cb .box { position: absolute; inset: 0; border: 2px solid var(--border-strong); border-radius: 6px; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+  .task-cb input:checked + .box { background: var(--ok); border-color: var(--ok); }
+  .task-cb .box::after { content: "✓"; color: #fff; font-size: 13px; font-weight: 800; opacity: 0; transition: opacity .15s; }
+  .task-cb input:checked + .box::after { opacity: 1; }
+  .task-text { font-size: 13.5px; line-height: 1.5; padding-top: 1px; }
   .task-row.done .task-text { text-decoration: line-through; color: var(--muted); }
-  .task-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .task-meta .lnk { color: var(--accent-2); cursor: pointer; }
-  .task-meta .lnk:hover { text-decoration: underline; }
 
   /* ---------- Balão de chat da reunião ---------- */
   #chatBubble { position: fixed; right: 26px; bottom: 26px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
@@ -566,12 +581,13 @@
             <h2>✅ Itens de ação</h2>
             <p>Reunidos de todas as atas. Marque como concluído — o estado fica salvo.</p>
           </div>
+          <div id="tasksStats" class="tasks-stats hidden"></div>
           <div class="mt-toolbar">
-            <button class="btn-ghost btn-tiny" id="refreshTasks" type="button">🔄 Atualizar</button>
-            <label style="display:flex;align-items:center;gap:7px;margin:0;cursor:pointer;color:var(--muted);font-size:12.5px;">
-              <input id="hideDone" type="checkbox" style="width:auto;" /> Ocultar concluídos
+            <div class="mt-search"><input id="taskSearch" type="search" placeholder="🔎 Filtrar tarefas…" /></div>
+            <label class="switch-row tasks-switch">
+              <span class="switch"><input id="hideDone" type="checkbox" /><span class="slider"></span></span> Ocultar concluídos
             </label>
-            <span class="count" id="tasksCount"></span>
+            <button class="btn-ghost btn-tiny" id="refreshTasks" type="button">🔄 Atualizar</button>
           </div>
           <div id="tasksList"></div>
         </div>
@@ -1664,27 +1680,57 @@
 
   // ==================== Tarefas (itens de ação) ====================
   let allTasks = [];
+  let taskFilter = "";
   async function loadTasks() {
     try { allTasks = await window.pywebview.api.list_action_items(); } catch (e) { allTasks = []; }
     renderTasks();
   }
   function renderTasks() {
-    const hideDone = $("#hideDone").checked;
-    const shown = hideDone ? allTasks.filter(i => !i.done) : allTasks;
-    const doneCount = allTasks.filter(i => i.done).length;
-    $("#tasksCount").textContent = allTasks.length ? `${allTasks.length} item(ns) · ${doneCount} concluído(s)` : "";
+    const total = allTasks.length, done = allTasks.filter(i => i.done).length;
+    const stats = $("#tasksStats");
+    if (total) {
+      stats.classList.remove("hidden");
+      const pct = Math.round(done / total * 100);
+      stats.innerHTML = `<div class="ts-head"><b>${done}</b> de ${total} concluída(s) · ${total - done} pendente(s)</div>
+        <div class="ts-bar"><div class="ts-fill" style="width:${pct}%"></div></div>`;
+    } else {
+      stats.classList.add("hidden");
+    }
+
+    const q = taskFilter.trim().toLowerCase();
+    let shown = allTasks;
+    if ($("#hideDone").checked) shown = shown.filter(i => !i.done);
+    if (q) shown = shown.filter(i => i.text.toLowerCase().includes(q) || (i.subject || "").toLowerCase().includes(q));
+
     const box = $("#tasksList");
     if (!shown.length) {
-      box.innerHTML = `<div class="mt-empty" style="padding:50px"><div class="mt-empty-ic">📝</div><h3>${allTasks.length ? "Tudo concluído 🎉" : "Nenhum item de ação"}</h3><p>Os itens de ação das atas aparecem aqui.</p></div>`;
+      const icon = total ? "🎉" : "📝";
+      const title = total ? "Nada por aqui" : "Nenhum item de ação";
+      box.innerHTML = `<div class="mt-empty" style="padding:50px"><div class="mt-empty-ic">${icon}</div><h3>${title}</h3><p>Os itens de ação das atas aparecem aqui.</p></div>`;
       return;
     }
-    box.innerHTML = shown.map(t => `<div class="task-row ${t.done ? "done" : ""}" data-id="${t.id}">
-      <input class="task-check" type="checkbox" ${t.done ? "checked" : ""} />
-      <div class="task-main">
-        <div class="task-text">${escapeHtml(t.text)}</div>
-        <div class="task-meta"><span>📁 ${escapeHtml(t.subject)}</span><span>🗓️ ${fmtDateTime(t.started_at)}</span><span class="lnk" data-go="${t.meeting_id}">abrir reunião ↗</span></div>
-      </div></div>`).join("");
-    box.querySelectorAll(".task-check").forEach(cb => cb.addEventListener("change", async () => {
+
+    // Agrupa por reunião, preservando a ordem (mais recentes primeiro).
+    const groups = [], byId = {};
+    for (const t of shown) {
+      if (!byId[t.meeting_id]) { byId[t.meeting_id] = { id: t.meeting_id, subject: t.subject, started_at: t.started_at, items: [] }; groups.push(byId[t.meeting_id]); }
+      byId[t.meeting_id].items.push(t);
+    }
+    box.innerHTML = groups.map(g => `<div class="task-group">
+      <div class="task-group-head">
+        <span class="tg-subj">📁 ${escapeHtml(g.subject)}</span>
+        <span class="tg-date">🗓️ ${fmtDateTime(g.started_at)}</span>
+        <span class="lnk" data-go="${g.id}">abrir reunião ↗</span>
+      </div>
+      <div class="task-group-body">
+        ${g.items.map(t => `<div class="task-row ${t.done ? "done" : ""}" data-id="${t.id}">
+          <label class="task-cb"><input type="checkbox" ${t.done ? "checked" : ""} /><span class="box"></span></label>
+          <div class="task-text">${escapeHtml(t.text)}</div>
+        </div>`).join("")}
+      </div>
+    </div>`).join("");
+
+    box.querySelectorAll(".task-cb input").forEach(cb => cb.addEventListener("change", async () => {
       const id = cb.closest(".task-row").dataset.id;
       await window.pywebview.api.set_action_done(id, cb.checked);
       const it = allTasks.find(x => x.id === id); if (it) it.done = cb.checked;
@@ -1694,6 +1740,7 @@
   }
   $("#refreshTasks").addEventListener("click", loadTasks);
   $("#hideDone").addEventListener("change", renderTasks);
+  $("#taskSearch").addEventListener("input", e => { taskFilter = e.target.value; renderTasks(); });
 
   // ==================== Compartilhar a ata ====================
   $("#copyMinutes").addEventListener("click", async () => {
