@@ -1,10 +1,19 @@
 # 🎙️ Ata Bot — reuniões do Discord
 
-Bot que **grava** uma reunião num canal de voz do Discord, **transcreve** localmente
-e **gera a ata** automaticamente (estilo Gemini/Meet), postando de volta no chat.
+[![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Plataformas](https://img.shields.io/badge/SO-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#instala%C3%A7%C3%A3o)
+[![PRs bem-vindos](https://img.shields.io/badge/PRs-bem--vindos-brightgreen.svg)](CONTRIBUTING.md)
+
+Bot **open source** que **grava** uma reunião num canal de voz do Discord,
+**transcreve** localmente e **gera a ata** automaticamente (estilo Gemini/Meet),
+postando de volta no chat.
 
 Tem um **app desktop nativo** (janela própria, roda no Windows, macOS e Linux) para
 configurar tudo por formulário e iniciar/parar o bot — sem editar arquivos à mão.
+
+> Gravação e transcrição rodam **100% na sua máquina**. Só o texto da transcrição
+> vai para o provedor de nuvem escolhido — e, com o Ollama, nada sai do PC.
 
 ## Como funciona
 
@@ -32,6 +41,12 @@ configurar tudo por formulário e iniciar/parar o bot — sem editar arquivos à
 
 Recomendado: **Python 3.11 ou 3.12** (o 3.14 é muito novo e algumas libs ainda não
 têm pacote pronto).
+
+Primeiro, clone o repositório:
+```bash
+git clone https://github.com/Advansoftware/Ata-Bot.git
+cd Ata-Bot
+```
 
 ### Windows
 1. Instale o Python de [python.org](https://www.python.org/downloads/) marcando
@@ -147,8 +162,25 @@ Depois de configurar uma vez pela interface (gera o `data/settings.json`):
 python -m bot
 ```
 
+Prefere configurar na mão? Copie o exemplo e preencha suas chaves:
+```bash
+mkdir -p data && cp settings.example.json data/settings.json
+# edite data/settings.json com o token do Discord e a chave do provedor
+```
+
 ## Privacidade
 
 - `data/` e as chaves (`settings.json`) ficam **fora do git** (`.gitignore`).
 - Com Ollama, nada sai da máquina. Com provedores de nuvem, só o texto da
   transcrição é enviado para gerar a ata.
+
+## Contribuindo
+
+Contribuições são muito bem-vindas! Veja o [CONTRIBUTING.md](CONTRIBUTING.md) para
+preparar o ambiente, o padrão de código e como enviar um Pull Request. Bugs e
+sugestões podem ir direto nas [issues](https://github.com/Advansoftware/Ata-Bot/issues).
+
+## Licença
+
+Distribuído sob a **Licença MIT** — use, modifique e distribua à vontade, inclusive
+comercialmente, mantendo o aviso de copyright. Veja o arquivo [LICENSE](LICENSE).

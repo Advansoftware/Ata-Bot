@@ -1,0 +1,31 @@
+{
+  "discord_token": "COLE_AQUI_O_TOKEN_DO_SEU_BOT",
+  "language": "pt",
+  "post_to_discord": true,
+  "output_dir": "",
+  "mic_device": null,
+  "transcription": {
+    "model": "small",
+    "device": "cpu",
+    "compute_type": "int8"
+  },
+  "minutes": {
+    "provider": "claude",
+    "claude": {
+      "model": "claude-opus-4-8",
+      "api_key": "COLE_AQUI_SUA_CHAVE_ANTHROPIC"
+    },
+    "openai": {
+      "model": "gpt-4o-mini",
+      "api_key": "COLE_AQUI_SUA_CHAVE_OPENAI"
+    },
+    "gemini": {
+      "model": "gemini-2.0-flash",
+      "api_key": "COLE_AQUI_SUA_CHAVE_GEMINI"
+    },
+    "ollama": {
+      "model": "llama3.1:8b",
+      "host": "http://localhost:11434"
+    }
+  }
+}
